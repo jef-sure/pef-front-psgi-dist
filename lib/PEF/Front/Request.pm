@@ -141,15 +141,42 @@ sub cookies {
 	$self->{cookies} = \%results;
 }
 
+sub php_jquery_param {
+	my ($root, $path, $value) = @_;
+	my @struct = $path =~ /\[?([^\[\]]+)\]?/g;
+	return if !@struct;
+	my $sl = \$root;
+	for my $key(@struct) {
+		if($key =~ /^\d+$/) {
+			$$sl //= [];
+			$sl = \$$sl->[$key];
+		} else {
+			$$sl //= {};
+			$sl = \$$sl->{$key};
+		}
+	}
+	if(substr($path, -2, 2) eq '[]') {
+		push @$$sl, $value;
+		$sl = \$$sl->[-1];
+	} else {
+		$$sl = $value;
+	}
+	return $sl;
+}
+
 sub _parse_urlencoded {
 	my $query = $_[0];
 	my $form  = {};
 	my @pairs = split (/[&;]/, $query);
 	foreach my $pair (@pairs) {
 		my ($name, $value) =
-		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; $_ }
+		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; eval {decode_utf8 $_}}
 		  split (/=/, $pair, 2);
-		eval { $form->{decode_utf8($name)} = decode_utf8 $value if defined $name and $name ne ''; };
+		if(index ($name, "[") >= 0 && index ($name, "]") > 0 ) {
+			php_jquery_param($form, $name, $value);
+		} else {
+			$form->{$name} = $value if defined $name and $name ne '';
+		}
 	}
 	return $form;
 }
@@ -216,6 +243,9 @@ sub _parse_request_body {
 	return $self->{body_params};
 }
 
+sub headers_block_size() {256}
+sub read_chunk_size()    {32768}
+
 sub _parse_multipart_form {
 	my $self   = $_[0];
 	my $buffer = '';
@@ -228,14 +258,13 @@ sub _parse_multipart_form {
 	return if not defined $boundary;
 	my $start_boundary = "--" . $boundary . "\x0d\x0a";
 	my $end_boundary   = "--" . $boundary . "--\x0d\x0a";
-	my $chl            = 65536;
 	my $lchnk          = 0;
-	my $current_field;
+	my $current_field_ref;
 	while (1) {
 		my $chunk;
 		my $start = index ($buffer, $start_boundary);
 		$start = index ($buffer, $end_boundary) if $start == -1;
-		$buffer .= $chunk if $start == -1 && $input->read($chunk, $chl);
+		$buffer .= $chunk if $start == -1 && $input->read($chunk, read_chunk_size);
 		last if $buffer eq '';
 		$start = index ($buffer, $start_boundary) if $start == -1;
 		$start = index ($buffer, $end_boundary)   if $start == -1;
@@ -259,6 +288,12 @@ sub _parse_multipart_form {
 				my ($file) = ($header =~ /filename="?([^";\x0d\x0a]*)[";\x0d\x0a]?/);
 				my ($type) = ($header =~ /Content-Type:\s*(\S+)/);
 				$name ||= '';
+				utf8::decode($name);
+				if(index ($name, "[") >= 0 && index ($name, "]") > 0 ) {
+					$current_field_ref = php_jquery_param($form, $name, '');
+				} else {
+					$current_field_ref = \$form->{$name};
+				}
 				if (defined ($file) && $file ne '') {
 					($file) = ($file =~ /([^\/\\]*)$/);
 					$file =~ s/^\s*//;
@@ -267,65 +302,68 @@ sub _parse_multipart_form {
 					if ($file eq '' || substr ($file, 0, 1) eq '.') {
 						$file = "unnamed_upload" . $file;
 					}
-					$current_field = decode_utf8($name);
-					$form->{$current_field} = PEF::Front::File->new(
-						filename => decode_utf8($file),
-						size     => $cl,
+					$$current_field_ref = PEF::Front::File->new(
+						filename     => decode_utf8($file),
+						size         => $cl,
 						content_type => $type || 'application/octet-stream',
-						(   exists ($form->{$current_field . '_id'})
-							  && !ref ($form->{$current_field . '_id'})
-							? (
-								id => $self->remote_ip . "/" . $self->scheme . "/" . $self->hostname . "/" . $form->{$current_field . '_id'})
-							: ()
-						)
 					);
-					$current_field = $form->{$current_field};
-					$current_field->append($current_value);
+					$$current_field_ref->append($current_value);
 				} else {
-					$current_field = decode_utf8($name);
-					$form->{$current_field} = $current_value;
+					$$current_field_ref = $current_value;
 				}
-				$current_field = undef if $next_start >= 0;
+				if ($next_start >= 0) {
+					utf8::decode($$current_field_ref) 
+						if not ref $$current_field_ref eq 'PEF::Front::File';
+					$current_field_ref = undef;
+				}
 				return 1;
 			}
 			return;
 		};
 		if ($start >= 0) {
-			last if (my $end = index ($buffer, $end_boundary)) == 0;
+			my $end = index ($buffer, $end_boundary);
+			if ($end == 0){
+				if (defined $current_field_ref and not ref $$current_field_ref) {
+					utf8::decode($$current_field_ref);
+					$current_field_ref = undef;
+				}
+				last;
+			}
 			my $be = $end == $start ? 2 : 0;
-			if (    defined $current_field
-				and ref $current_field eq 'PEF::Front::File'
+			if (    defined $current_field_ref
+				and ref $$current_field_ref eq 'PEF::Front::File'
 				and $start > 1)
 			{
-				$current_field->append(substr ($buffer, 0, $start - 2));
-				$current_field->finish;
-				$current_field = undef;
+				$$current_field_ref->append(substr ($buffer, 0, $start - 2));
+				$$current_field_ref->finish;
+				$current_field_ref = undef;
 				substr ($buffer, 0, $start + length ($start_boundary) + $be, '');
-			} elsif (defined $current_field and $start > 1) {
-				$form->{$current_field} .= substr ($buffer, 0, $start - 2);
-				$current_field = undef;
+			} elsif (defined $current_field_ref) {
+				$$current_field_ref .= substr ($buffer, 0, $start - 2) if $start > 1;
+				utf8::decode($$current_field_ref);
+				$current_field_ref = undef;
 				substr ($buffer, 0, $start + length ($start_boundary) + $be, '');
 			}
 			if (not $field_sub->()) {
 				substr ($buffer, 0, $start + length ($start_boundary) + $be, '');
 			}
 		} else {
-			my $store_chunk = $lchnk;
-			if (length ($buffer) < $store_chunk + 256) {
-				if (length ($buffer) > 512) {
-					$store_chunk = length ($buffer) - 256;
+			my $store_chunk = $lchnk > headers_block_size? $lchnk - headers_block_size: 0;
+			if (length ($buffer) < $store_chunk + headers_block_size * 2) {
+				if (length ($buffer) > headers_block_size * 2) {
+					$store_chunk = length ($buffer) - headers_block_size;
 				} else {
 					$store_chunk = 0;
 				}
 			}
-			if (defined $current_field and ref $current_field eq 'PEF::Front::File') {
+			if (defined $current_field_ref and ref $$current_field_ref eq 'PEF::Front::File') {
 				if ($store_chunk) {
-					$current_field->append(substr ($buffer, 0, $store_chunk));
+					$$current_field_ref->append(substr ($buffer, 0, $store_chunk));
 					substr ($buffer, 0, $store_chunk, '');
 				}
-			} elsif (defined $current_field) {
+			} elsif (defined $current_field_ref) {
 				if ($store_chunk) {
-					$form->{$current_field} .= substr ($buffer, 0, $store_chunk);
+					$$current_field_ref .= substr ($buffer, 0, $store_chunk);
 					substr ($buffer, 0, $store_chunk, '');
 				}
 			} else {
@@ -333,9 +371,6 @@ sub _parse_multipart_form {
 			}
 		}
 		$lchnk = length $buffer;
-	}
-	for my $k (keys %$form) {
-		$form->{$k} = decode_utf8 $form->{$k} if not ref $form->{$k};
 	}
 	return $form;
 }
