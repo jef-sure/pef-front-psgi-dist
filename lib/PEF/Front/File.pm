@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use File::Basename;
 use PEF::Front::Config;
-use PEF::Front::Cache;
 
 sub new {
 	my ($class, %args) = @_;
@@ -35,10 +34,6 @@ sub new {
 	  };
 	binmode $fh;
 	$self->{fh} = $fh;
-	if (exists ($args{id}) && $args{id} ne '') {
-		$self->{id} = $args{id};
-		set_cache("upload:$self->{id}", "0:$self->{size}");
-	}
 	$self;
 }
 
@@ -57,19 +52,12 @@ sub append {
 		answer => "Partial upload write: $rc != " . length $_[1]
 	  }
 	  if $rc != length $_[1];
-	if (exists $self->{id}) {
-		my $size = sysseek ($self->{fh}, 0, 1);
-		set_cache("upload:$self->{id}", "$size:$self->{size}");
-	}
 }
 
 sub finish {
 	my $self = $_[0];
-	if (exists $self->{id}) {
-		my $size = sysseek ($self->{fh}, 0, 2);
-		set_cache("upload:$self->{id}", "$size:$size");
-		$self->{size} = $size;
-	}
+	my $size = sysseek ($self->{fh}, 0, 2);
+	$self->{size} = $size;
 }
 
 sub value {
@@ -86,7 +74,6 @@ sub DESTROY {
 	my $self = $_[0];
 	close ($self->{fh});
 	$self->{fh} = undef;
-	remove_cache_key("upload:$self->{id}") if exists $self->{id};
 	unlink "$self->{upload_path}/$self->{filename}";
 }
 
