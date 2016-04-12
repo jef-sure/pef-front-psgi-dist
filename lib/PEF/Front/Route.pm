@@ -178,6 +178,7 @@ sub prepare_defaults {
 		}
 	}
 	return PEF::Front::Response->new(base => $request->base, status => 404) if $method =~ /[\/.\\]/;
+	$method =~ s/[[:upper:]]\K([[:upper:]])/ \l$1/g;
 	$method =~ s/[[:lower:]]\K([[:upper:]])/ \l$1/g;
 	$method = lcfirst $method;
 	return {

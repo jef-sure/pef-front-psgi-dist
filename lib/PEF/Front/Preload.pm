@@ -37,7 +37,7 @@ sub preload_model {
 	opendir my $mdir, cfg_model_dir
 	  or croak "can't open model description directory: $!";
 	my @methods =
-	  map { s/\.yaml$//; s/[[:lower:]]\K([[:upper:]])/ \l$1/g; lcfirst }
+	  map { s/\.yaml$//; s/[[:upper:]]\K([[:upper:]])/ \l$1/g; s/[[:lower:]]\K([[:upper:]])/ \l$1/g; lcfirst }
 	  grep { /\.yaml$/ } readdir $mdir;
 	closedir $mdir;
 	for (@methods) {
