@@ -12,7 +12,7 @@ my $fname;
 my $lang;
 
 for (my $i = 0; $i < @ARGV; ++$i) {
-	if ($ARGV[$i] =~ /^-/) {
+	if ($ARGV[$i] =~ /^-\S/) {
 		$ARGV[$i] =~ /^-dbname/ && do {
 			$dbname = $ARGV[$i + 1];
 			++$i;
@@ -35,7 +35,7 @@ for (my $i = 0; $i < @ARGV; ++$i) {
 }
 
 if (!$lang && $fname) {
-	($lang) =~ /[^a-z]([a-z]{2})\./i;
+	($lang) = $fname =~ /[^a-z]([a-z]{2})\./i;
 	$lang = lc $lang if $lang;
 }
 
