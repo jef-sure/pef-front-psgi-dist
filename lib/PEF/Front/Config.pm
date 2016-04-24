@@ -13,74 +13,75 @@ sub normalize_path {
 	my $path = $_[0];
 	if (not $path) {
 		return '.';
-	} elsif (substr ($path, -1, 1) ne '/') {
+	} elsif (substr($path, -1, 1) ne '/') {
 		return $path;
 	} else {
-		return substr ($path, 0, -1);
+		return substr($path, 0, -1);
 	}
 }
 
 my @std_const_params = qw{
-  cfg_upload_dir
-  cfg_captcha_db
-  cfg_captcha_font
-  cfg_captcha_image_init
-  cfg_captcha_image_class
-  cfg_captcha_secret
-  cfg_captcha_symbols
-  cfg_captcha_expire_sec
-  cfg_model_dir
-  cfg_cache_file
-  cfg_cache_size
-  cfg_cache_method_expire
-  cfg_cookie_unset_negative_expire
-  cfg_www_static_dir
-  cfg_www_static_captchas_dir
-  cfg_www_static_captchas_path
-  cfg_in_filter_dir
-  cfg_out_filter_dir
-  cfg_db_user
-  cfg_db_password
-  cfg_db_name
-  cfg_db_reconnect_trys
-  cfg_model_rpc_admin_port
-  cfg_model_rpc_site_port
-  cfg_model_rpc_admin_addr
-  cfg_model_rpc_site_addr
-  cfg_model_local_dir
-  cfg_project_dir
-  cfg_app_namespace
-  cfg_default_lang
-  cfg_url_contains_lang
-  cfg_template_dir_contains_lang
-  cfg_no_multilang_support
-  cfg_location_error
-  cfg_template_cache
-  cfg_no_nls
-  cfg_handle_static
-  cfg_log_level_info
-  cfg_log_level_error
-  cfg_log_level_debug
-  cfg_session_db_file
-  cfg_session_ttl
-  cfg_session_request_field
-  cfg_oauth_connect_timeout
-  cfg_unknown_msgid_db
-  cfg_collect_unknown_msgid
+	cfg_upload_dir
+	cfg_captcha_db
+	cfg_captcha_font
+	cfg_captcha_image_init
+	cfg_captcha_image_class
+	cfg_captcha_secret
+	cfg_captcha_symbols
+	cfg_captcha_expire_sec
+	cfg_model_dir
+	cfg_cache_file
+	cfg_cache_size
+	cfg_cache_method_expire
+	cfg_cookie_unset_negative_expire
+	cfg_www_static_dir
+	cfg_www_static_captchas_dir
+	cfg_www_static_captchas_path
+	cfg_in_filter_dir
+	cfg_out_filter_dir
+	cfg_db_user
+	cfg_db_password
+	cfg_db_name
+	cfg_db_reconnect_trys
+	cfg_model_rpc_admin_port
+	cfg_model_rpc_site_port
+	cfg_model_rpc_admin_addr
+	cfg_model_rpc_site_addr
+	cfg_model_local_dir
+	cfg_project_dir
+	cfg_app_namespace
+	cfg_default_lang
+	cfg_url_contains_lang
+	cfg_template_dir_contains_lang
+	cfg_no_multilang_support
+	cfg_location_error
+	cfg_template_cache
+	cfg_no_nls
+	cfg_handle_static
+	cfg_log_level_info
+	cfg_log_level_error
+	cfg_log_level_debug
+	cfg_session_db_file
+	cfg_session_ttl
+	cfg_session_request_field
+	cfg_oauth_connect_timeout
+	cfg_unknown_msgid_db
+	cfg_collect_unknown_msgid
 };
 
 my @std_var_params = qw{
-  cfg_template_dir
-  cfg_model_rpc
-  cfg_oauth_client_id
-  cfg_oauth_client_secret
-  cfg_oauth_scopes
+	cfg_template_dir
+	cfg_model_rpc
+	cfg_oauth_client_id
+	cfg_oauth_client_secret
+	cfg_oauth_scopes
+	cfg_logger
 };
 
 our %config_export;
 
 sub import {
-	my ($modname) = grep { /AppFrontConfig\.pm$/ } keys %INC;
+	my ($modname) = grep {/AppFrontConfig\.pm$/} keys %INC;
 	die "no config" if 0 && !$modname;
 	$modname = 'fakemodule' if !$modname;
 	(undef, $app_conf_dir, undef) = fileparse($INC{$modname} || '', ".pm");
@@ -92,7 +93,8 @@ sub import {
 	my $cp = caller;
 	no strict 'refs';
 	my @pa = (\@std_const_params, \@std_var_params);
-	for (my $i = 0 ; $i < @pa ; ++$i) {
+
+	for (my $i = 0; $i < @pa; ++$i) {
 		for my $method (@{$pa[$i]}) {
 			(my $bmn = $method) =~ s/^cfg_//;
 			my $cref = "$modname"->can($method) || *{$mp . "::std_$bmn"};
@@ -118,50 +120,50 @@ sub import {
 	}
 }
 
-sub std_project_dir                  { $project_dir }
-sub std_no_nls                       { 0 }
-sub std_unknown_msgid_db             { cfg_project_dir() . "/var/cache/unknown-msgid.db" }
-sub std_collect_unknown_msgid        { 0 }
-sub std_model_rpc_admin_port         { 5500 }
-sub std_model_rpc_site_port          { 4500 }
-sub std_model_rpc_admin_addr         { '172.16.0.1' }
-sub std_model_rpc_site_addr          { '172.16.0.1' }
-sub std_template_cache               { cfg_project_dir() . "/var/tt_cache" }
-sub std_location_error               { "/appError?msgid=Internal\%20Error" }
-sub std_db_reconnect_trys            { 30 }
-sub std_no_multilang_support         { 1 }
-sub std_default_lang                 { 'en' }
-sub std_url_contains_lang            { 0 }
-sub std_template_dir_contains_lang   { 0 }
-sub std_handle_static                { 0 }
-sub std_app_namespace                { $app_namespace }
-sub std_in_filter_dir                { "$app_conf_dir/InFilter" }
-sub std_model_local_dir              { "$app_conf_dir/Local" }
-sub std_out_filter_dir               { "$app_conf_dir/OutFilter" }
-sub std_upload_dir                   { cfg_project_dir() . "/var/upload" }
-sub std_captcha_db                   { cfg_project_dir() . "/var/captcha-db" }
-sub std_captcha_font                 { "giant" }
-sub std_captcha_image_init           { {} }
-sub std_captcha_image_class          { "PEF::Front::SecureCaptcha" }
-sub std_captcha_secret               { "very secret" }
-sub std_captcha_expire_sec           { 300 }
-sub std_cache_file                   { cfg_project_dir() . "/var/cache/shared.cache" }
-sub std_cache_size                   { "8m" }
-sub std_cache_method_expire          { 60 }
-sub std_model_dir                    { cfg_project_dir() . "/model" }
-sub std_www_static_dir               { cfg_project_dir() . "/www-static" }
-sub std_www_static_captchas_dir      { cfg_project_dir() . "/www-static/captchas" }
-sub std_db_user                      { "pef" }
-sub std_db_password                  { "pef-pass" }
-sub std_db_name                      { "pef" }
-sub std_log_level_info               { 1 }
-sub std_log_level_error              { 1 }
-sub std_log_level_debug              { 0 }
-sub std_session_db_file              { cfg_project_dir() . "/var/cache/session.db" }
-sub std_session_ttl                  { 86400 * 30 }
-sub std_session_request_field        { 'auth' }
-sub std_cookie_unset_negative_expire { -3600 }
-sub std_oauth_connect_timeout        { 15 }
+sub std_project_dir                  {$project_dir}
+sub std_no_nls                       {0}
+sub std_unknown_msgid_db             {cfg_project_dir() . "/var/cache/unknown-msgid.db"}
+sub std_collect_unknown_msgid        {0}
+sub std_model_rpc_admin_port         {5500}
+sub std_model_rpc_site_port          {4500}
+sub std_model_rpc_admin_addr         {'172.16.0.1'}
+sub std_model_rpc_site_addr          {'172.16.0.1'}
+sub std_template_cache               {cfg_project_dir() . "/var/tt_cache"}
+sub std_location_error               {"/appError?msgid=Internal\%20Error"}
+sub std_db_reconnect_trys            {30}
+sub std_no_multilang_support         {1}
+sub std_default_lang                 {'en'}
+sub std_url_contains_lang            {0}
+sub std_template_dir_contains_lang   {0}
+sub std_handle_static                {0}
+sub std_app_namespace                {$app_namespace}
+sub std_in_filter_dir                {"$app_conf_dir/InFilter"}
+sub std_model_local_dir              {"$app_conf_dir/Local"}
+sub std_out_filter_dir               {"$app_conf_dir/OutFilter"}
+sub std_upload_dir                   {cfg_project_dir() . "/var/upload"}
+sub std_captcha_db                   {cfg_project_dir() . "/var/captcha-db"}
+sub std_captcha_font                 {"giant"}
+sub std_captcha_image_init           {{}}
+sub std_captcha_image_class          {"PEF::Front::SecureCaptcha"}
+sub std_captcha_secret               {"very secret"}
+sub std_captcha_expire_sec           {300}
+sub std_cache_file                   {cfg_project_dir() . "/var/cache/shared.cache"}
+sub std_cache_size                   {"8m"}
+sub std_cache_method_expire          {60}
+sub std_model_dir                    {cfg_project_dir() . "/model"}
+sub std_www_static_dir               {cfg_project_dir() . "/www-static"}
+sub std_www_static_captchas_dir      {cfg_project_dir() . "/www-static/captchas"}
+sub std_db_user                      {"pef"}
+sub std_db_password                  {"pef-pass"}
+sub std_db_name                      {"pef"}
+sub std_log_level_info               {1}
+sub std_log_level_error              {1}
+sub std_log_level_debug              {0}
+sub std_session_db_file              {cfg_project_dir() . "/var/cache/session.db"}
+sub std_session_ttl                  {86400 * 30}
+sub std_session_request_field        {'auth'}
+sub std_cookie_unset_negative_expire {-3600}
+sub std_oauth_connect_timeout        {15}
 
 sub std_captcha_symbols {
 	state $symbols = ["0" .. "9", split //, "abCdEFgHiJKLMNOPqRSTUVWXyZ"];
@@ -169,9 +171,9 @@ sub std_captcha_symbols {
 }
 
 sub std_www_static_captchas_path {
-	if (substr (cfg_www_static_captchas_dir(), 0, length (cfg_www_static_dir())) eq cfg_www_static_dir()) {
+	if (substr(cfg_www_static_captchas_dir(), 0, length(cfg_www_static_dir())) eq cfg_www_static_dir()) {
 		# removes cfg_www_static_dir() from cfg_www_static_captchas_dir() and adds '/'
-		substr (cfg_www_static_captchas_dir(), length (cfg_www_static_dir())) . '/';
+		substr(cfg_www_static_captchas_dir(), length(cfg_www_static_dir())) . '/';
 	} else {
 		#must be overriden by user
 		'/captchas/';
@@ -180,8 +182,8 @@ sub std_www_static_captchas_path {
 
 sub std_template_dir {
 	cfg_template_dir_contains_lang()
-	  ? cfg_project_dir() . "/templates/$_[1]"
-	  : cfg_project_dir() . "/templates";
+		? cfg_project_dir() . "/templates/$_[1]"
+		: cfg_project_dir() . "/templates";
 }
 
 sub std_model_rpc {
@@ -248,17 +250,23 @@ sub std_oauth_scopes {
 			email     => 'email',
 			user_info => 'email profile phone address',
 			all       => 'email openid profile phone address'
-			  . 'https://uri.paypal.com/services/paypalattributes'
-			  . ' https://uri.paypal.com/services/expresscheckout',
+				. 'https://uri.paypal.com/services/paypalattributes'
+				. ' https://uri.paypal.com/services/expresscheckout',
 		},
 		linked_in => {
 			email     => 'r_emailaddress',
 			share     => 'rw_nus',
 			user_info => 'r_emailaddress r_fullprofile',
-		  }
+			}
 
 	};
 	$scopes->{$_[0]};
+}
+
+sub std_logger {
+	my $request = $_[0];
+	$request->{env}{'psgix.logger'}
+		|| sub {$request->{env}{'psgi.errors'}->print($_[0]->{message});}
 }
 
 sub cfg {
