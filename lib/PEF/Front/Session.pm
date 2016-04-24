@@ -36,7 +36,7 @@ sub new {
 }
 
 sub load {
-	my ($self, $key) = @_;
+	my $self = $_[0];
 	my %session_db;
 	my $sobj = tie (%session_db, 'MLDBM::Sync', cfg_session_db_file, O_CREAT | O_RDWR, 0660) or die "$!";
 	$sobj->Lock;
