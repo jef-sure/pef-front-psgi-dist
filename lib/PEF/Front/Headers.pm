@@ -3,12 +3,24 @@ use strict;
 use warnings;
 use PEF::Front::Config;
 use Time::Duration::Parse;
+use Scalar::Util qw(blessed);
 use Encode;
 use utf8;
 
 sub new {
 	my $self = bless {}, $_[0];
-	for (my $i = 1 ; $i < @_ ; $i += 2) {
+	for (my $i = 1; $i < @_; $i += 2) {
+		if (blessed($_[$i]) && $_[$i]->isa("PEF::Front::Headers")) {
+			for my $fk (keys %{$_[$i]}) {
+				if ('ARRAY' eq ref $_[$i]->{$fk}) {
+					@{$self->{$fk}} = @{$_[$i]->{$fk}};
+				} else {
+					$self->{$fk} = $_[$i]->{$fk};
+				}
+			}
+			++$i;
+			redo;
+		}
 		$self->add_header($_[$i], $_[$i + 1]);
 	}
 	$self;
@@ -48,10 +60,9 @@ sub get_all_headers {
 	my $ret  = [
 		map {
 			my $key = $_;
-			!ref ($self->{$key})
-			  || 'ARRAY' ne ref ($self->{$key})
-			  ? ($key => $self->{$key})
-			  : (map { $key => $_ } @{$self->{$key}})
+			!ref($self->{$key}) || 'ARRAY' ne ref($self->{$key})
+				? ($key => $self->{$key})
+				: (map {$key => $_} @{$self->{$key}})
 		} keys %$self
 	];
 	$ret;
