@@ -7,43 +7,50 @@ use utf8;
 use Encode;
 use PEF::Front::Headers;
 use PEF::Front::File;
+use PEF::Front::Config;
 use XML::Simple;
 use URI;
 
 sub new {
 	my ($class, $env) = @_;
 	Carp::croak(q{$env is required})
-	  unless defined $env && ref ($env) eq 'HASH';
+		unless defined $env && ref($env) eq 'HASH';
 	my $self = bless {env => $env}, $class;
 	$self->_parse;
 	$self;
 }
-sub env              { $_[0]->{env} }
-sub remote_ip        { $_[0]->{env}{REMOTE_ADDR} }
-sub protocol         { $_[0]->{env}{SERVER_PROTOCOL} }
-sub method           { $_[0]->{env}{REQUEST_METHOD} }
-sub port             { $_[0]->{env}{SERVER_PORT} }
-sub user             { $_[0]->{env}{REMOTE_USER} }
-sub request_uri      { $_[0]->{env}{REQUEST_URI} }
-sub path_info        { $_[0]->{env}{PATH_INFO} }
-sub query_string     { $_[0]->{env}{QUERY_STRING} }
-sub script_name      { $_[0]->{env}{SCRIPT_NAME} }
-sub scheme           { $_[0]->{env}{'psgi.url_scheme'} }
-sub uri              { URI->new($_[0]->base) }
-sub secure           { $_[0]->scheme eq 'https' }
-sub _input           { $_[0]->{env}{'psgi.input'} }
-sub content_length   { $_[0]->{env}{CONTENT_LENGTH} }
-sub content_type     { $_[0]->{env}{CONTENT_TYPE} }
-sub raw_body         { $_[0]->{raw_body} }
-sub content_encoding { $_[0]->headers->get_header("content_encoding") }
-sub header           { $_[0]->headers->get_header($_[1]) }
-sub referer          { $_[0]->headers->get_header("referer") }
-sub user_agent       { $_[0]->headers->get_header("user_agent") }
+sub env               {$_[0]->{env}}
+sub remote_ip         {$_[0]->{env}{REMOTE_ADDR}}
+sub protocol          {$_[0]->{env}{SERVER_PROTOCOL}}
+sub method            {$_[0]->{env}{REQUEST_METHOD}}
+sub port              {$_[0]->{env}{SERVER_PORT}}
+sub user              {$_[0]->{env}{REMOTE_USER}}
+sub request_uri       {$_[0]->{env}{REQUEST_URI}}
+sub path_info         {$_[0]->{env}{PATH_INFO}}
+sub query_string      {$_[0]->{env}{QUERY_STRING}}
+sub script_name       {$_[0]->{env}{SCRIPT_NAME}}
+sub scheme            {$_[0]->{env}{'psgi.url_scheme'}}
+sub uri               {URI->new($_[0]->base)}
+sub secure            {$_[0]->scheme eq 'https'}
+sub _input            {$_[0]->{env}{'psgi.input'}}
+sub content_length    {$_[0]->{env}{CONTENT_LENGTH}}
+sub content_type      {$_[0]->{env}{CONTENT_TYPE}}
+sub raw_body          {$_[0]->{raw_body}}
+sub content_encoding  {$_[0]->headers->get_header("content_encoding")}
+sub header            {$_[0]->headers->get_header($_[1])}
+sub referer           {$_[0]->headers->get_header("referer")}
+sub user_agent        {$_[0]->headers->get_header("user_agent")}
+sub set_out_header    {$_[0]->out_headers->set_header($_[1] => $_[2])}
+sub remove_out_header {$_[0]->out_headers->remove_header($_[1])}
+sub get_out_header    {$_[0]->out_headers->get_header($_[1])}
+sub set_out_cookie    {$_[0]->out_cookies->set_header($_[1] => $_[2])}
+sub remove_out_cookie {$_[0]->out_cookies->remove_header($_[1])}
+sub get_out_cookie    {$_[0]->out_cookies->get_header($_[1])}
 
 sub logger {
 	my $self = $_[0];
-	$self->{env}{'psgix.logger'}
-	  || sub { $self->{env}{'psgi.errors'}->print($_[0]->{message}); }
+	cfg_logger($self)
+		|| sub {$self->{env}{'psgi.errors'}->print($_[0]->{message});}
 }
 
 sub _parse {
@@ -60,7 +67,7 @@ sub params {
 	my $p = $self->{body_params}  || {};
 	$self->{params} = {%$p, %$q};
 	if (exists $self->{params}{json}) {
-		my $form = eval { from_json $self->{params}{json} } || {};
+		my $form = eval {from_json $self->{params}{json}} || {};
 		$self->logger({level => "warn", message => $@}) if $@;
 		$self->{params} = {%{$self->{params}}, %$form};
 	}
@@ -76,9 +83,8 @@ sub path {
 		if (not defined $np or $np =~ /^\s*$/) {
 			$self->{path} = '/';
 		} else {
-			if (substr ($np, 0, 1) ne '/') {
-				$self->{path} =
-				  substr ($self->{path}, 0, rindex ($self->{path}, '/') + 1) . $np;
+			if (substr($np, 0, 1) ne '/') {
+				$self->{path} = substr($self->{path}, 0, rindex($self->{path}, '/') + 1) . $np;
 			} else {
 				$self->{path} = $np;
 			}
@@ -99,6 +105,24 @@ sub note {
 	}
 }
 
+sub out_headers {
+	my $self = shift;
+	if (not $self->{out_headers} and @_ > 1) {
+		my $env = $self->{env};
+		$self->{out_headers} = PEF::Front::HTTPHeaders->new(@_[1 .. $#_]);
+	}
+	$self->{out_headers};
+}
+
+sub out_cookies {
+	my $self = shift;
+	if (not $self->{out_cookies} and @_ > 1) {
+		my $env = $self->{env};
+		$self->{out_cookies} = PEF::Front::Headers->new(@_[1 .. $#_]);
+	}
+	$self->{out_cookies};
+}
+
 sub param {
 	my ($self, $param, $value) = @_;
 	return $self->params->{$param} if not defined $value;
@@ -116,8 +140,7 @@ sub hostname {
 sub base {
 	my $self = $_[0];
 	return $self->{base} if exists $self->{base};
-	$self->{base} =
-	  $self->scheme . "://" . ($self->{env}{HTTP_HOST} || $self->{env}{SERVER_NAME}) . $self->request_uri;
+	$self->{base} = $self->scheme . "://" . ($self->{env}{HTTP_HOST} || $self->{env}{SERVER_NAME}) . $self->request_uri;
 	$self->{base};
 }
 
@@ -130,12 +153,11 @@ sub cookies {
 	for my $pair (@pairs) {
 		$pair =~ s/^\s+//;
 		$pair =~ s/\s+$//;
-		my ($key, $value) =
-		  map {
+		my ($key, $value) = map {
 			tr/+/ /;
 			s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
 			decode_utf8 $_
-		  } split ("=", $pair, 2);
+		} split("=", $pair, 2);
 		$results{$key} = $value;
 	}
 	$self->{cookies} = \%results;
@@ -146,8 +168,8 @@ sub php_jquery_param {
 	my @struct = $path =~ /\[?([^\[\]]+)\]?/g;
 	return if !@struct;
 	my $sl = \$root;
-	for my $key(@struct) {
-		if($key =~ /^\d+$/) {
+	for my $key (@struct) {
+		if ($key =~ /^\d+$/) {
 			$$sl //= [];
 			$sl = \$$sl->[$key];
 		} else {
@@ -155,7 +177,7 @@ sub php_jquery_param {
 			$sl = \$$sl->{$key};
 		}
 	}
-	if(substr($path, -2, 2) eq '[]') {
+	if (substr($path, -2, 2) eq '[]') {
 		push @$$sl, $value;
 		$sl = \$$sl->[-1];
 	} else {
@@ -167,12 +189,15 @@ sub php_jquery_param {
 sub _parse_urlencoded {
 	my $query = $_[0];
 	my $form  = {};
-	my @pairs = split (/[&;]/, $query);
+	my @pairs = split(/[&;]/, $query);
 	foreach my $pair (@pairs) {
-		my ($name, $value) =
-		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; eval {decode_utf8 $_}}
-		  split (/=/, $pair, 2);
-		if(index ($name, "[") >= 0 && index ($name, "]") > 0 ) {
+		my ($name, $value) = map {
+			tr/+/ /;
+			s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
+			eval {decode_utf8 $_}
+			}
+			split(/=/, $pair, 2);
+		if (index($name, "[") >= 0 && index($name, "]") > 0) {
 			php_jquery_param($form, $name, $value);
 		} else {
 			$form->{$name} = $value if defined $name and $name ne '';
@@ -189,10 +214,10 @@ sub headers {
 			map {
 				(my $field = decode_utf8 $_) =~ s/^HTTPS?_//;
 				($field => decode_utf8 $env->{$_});
-			  }
-			  grep {
+				}
+				grep {
 				/^HTTP/ || /^CONTENT/
-			  } keys %$env
+				} keys %$env
 		);
 	}
 	$self->{headers};
@@ -221,23 +246,23 @@ sub _parse_request_body {
 			$cl -= length $buffer;
 		}
 	};
-	if (index ($ct, 'application/x-www-form-urlencoded') == 0) {
+	if (index($ct, 'application/x-www-form-urlencoded') == 0) {
 		$read_body_sub->();
 		$self->{body_params} = _parse_urlencoded($self->{raw_body});
-	} elsif (index ($ct, 'application/json') == 0) {
+	} elsif (index($ct, 'application/json') == 0) {
 		$read_body_sub->();
 		my $from_json = $self->{raw_body};
-		if (substr ($self->{raw_body}, 0, 2) eq '%7') {
+		if (substr($self->{raw_body}, 0, 2) eq '%7') {
 			$from_json =~ tr/+/ /;
 			$from_json =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
 		}
-		$self->{body_params} = eval { $from_json && decode_json $from_json } || {};
+		$self->{body_params} = eval {$from_json && decode_json $from_json } || {};
 		return $self->{body_params};
-	} elsif (index ($ct, 'application/xml') == 0) {
+	} elsif (index($ct, 'application/xml') == 0) {
 		$read_body_sub->();
-		$self->{body_params} = eval { XMLin $self->{raw_body} } || {};
+		$self->{body_params} = eval {XMLin $self->{raw_body}} || {};
 		return $self->{body_params};
-	} elsif (index ($ct, 'multipart/form-data') == 0) {
+	} elsif (index($ct, 'multipart/form-data') == 0) {
 		$self->_parse_multipart_form;
 	}
 	return $self->{body_params};
@@ -260,27 +285,29 @@ sub _parse_multipart_form {
 	my $end_boundary   = "--" . $boundary . "--\x0d\x0a";
 	my $lchnk          = 0;
 	my $current_field_ref;
+
 	while (1) {
 		my $chunk;
-		my $start = index ($buffer, $start_boundary);
-		$start = index ($buffer, $end_boundary) if $start == -1;
+		my $start = index($buffer, $start_boundary);
+		$start = index($buffer, $end_boundary) if $start == -1;
 		$buffer .= $chunk if $start == -1 && $input->read($chunk, read_chunk_size);
 		last if $buffer eq '';
-		$start = index ($buffer, $start_boundary) if $start == -1;
-		$start = index ($buffer, $end_boundary)   if $start == -1;
+		$start = index($buffer, $start_boundary) if $start == -1;
+		$start = index($buffer, $end_boundary)   if $start == -1;
 		my $field_sub = sub {
+
 			if (   $buffer ne ''
 				&& $buffer =~ /^Content-Disposition:/
-				&& (my $body_start = index ($buffer, "\x0d\x0a\x0d\x0a")))
+				&& (my $body_start = index($buffer, "\x0d\x0a\x0d\x0a")))
 			{
-				my $header = substr ($buffer, 0, $body_start);
-				substr ($buffer, 0, $body_start + 4, '');
-				my $next_start = index ($buffer, $start_boundary);
-				$next_start = index ($buffer, $end_boundary) if $next_start == -1;
+				my $header = substr($buffer, 0, $body_start);
+				substr($buffer, 0, $body_start + 4, '');
+				my $next_start = index($buffer, $start_boundary);
+				$next_start = index($buffer, $end_boundary) if $next_start == -1;
 				my $current_value;
 				if ($next_start >= 0) {
-					$current_value = substr ($buffer, 0, $next_start - 2);
-					substr ($buffer, 0, $next_start, '');
+					$current_value = substr($buffer, 0, $next_start - 2);
+					substr($buffer, 0, $next_start, '');
 				} else {
 					$current_value = '';
 				}
@@ -289,22 +316,22 @@ sub _parse_multipart_form {
 				my ($type) = ($header =~ /Content-Type:\s*(\S+)/);
 				$name ||= '';
 				utf8::decode($name);
-				if(index ($name, "[") >= 0 && index ($name, "]") > 0 ) {
+				if (index($name, "[") >= 0 && index($name, "]") > 0) {
 					$current_field_ref = php_jquery_param($form, $name, '');
 				} else {
 					$current_field_ref = \$form->{$name};
 				}
-				if (defined ($file) && $file ne '') {
+				if (defined($file) && $file ne '') {
 					($file) = ($file =~ /([^\/\\]*)$/);
 					$file =~ s/^\s*//;
 					$file =~ s/\s*$//;
 					$file =~ s/^(\w+:+)+//;
-					if ($file eq '' || substr ($file, 0, 1) eq '.') {
+					if ($file eq '' || substr($file, 0, 1) eq '.') {
 						$file = "unnamed_upload" . $file;
 					}
 					$$current_field_ref = PEF::Front::File->new(
-						filename     => decode_utf8($file),
-						size         => $cl,
+						filename => decode_utf8($file),
+						size     => $cl,
 						content_type => $type || 'application/octet-stream',
 					);
 					$$current_field_ref->append($current_value);
@@ -312,7 +339,7 @@ sub _parse_multipart_form {
 					$$current_field_ref = $current_value;
 				}
 				if ($next_start >= 0) {
-					utf8::decode($$current_field_ref) 
+					utf8::decode($$current_field_ref)
 						if not ref $$current_field_ref eq 'PEF::Front::File';
 					$current_field_ref = undef;
 				}
@@ -321,8 +348,8 @@ sub _parse_multipart_form {
 			return;
 		};
 		if ($start >= 0) {
-			my $end = index ($buffer, $end_boundary);
-			if ($end == 0){
+			my $end = index($buffer, $end_boundary);
+			if ($end == 0) {
 				if (defined $current_field_ref and not ref $$current_field_ref) {
 					utf8::decode($$current_field_ref);
 					$current_field_ref = undef;
@@ -334,37 +361,37 @@ sub _parse_multipart_form {
 				and ref $$current_field_ref eq 'PEF::Front::File'
 				and $start > 1)
 			{
-				$$current_field_ref->append(substr ($buffer, 0, $start - 2));
+				$$current_field_ref->append(substr($buffer, 0, $start - 2));
 				$$current_field_ref->finish;
 				$current_field_ref = undef;
-				substr ($buffer, 0, $start + length ($start_boundary) + $be, '');
+				substr($buffer, 0, $start + length($start_boundary) + $be, '');
 			} elsif (defined $current_field_ref) {
-				$$current_field_ref .= substr ($buffer, 0, $start - 2) if $start > 1;
+				$$current_field_ref .= substr($buffer, 0, $start - 2) if $start > 1;
 				utf8::decode($$current_field_ref);
 				$current_field_ref = undef;
-				substr ($buffer, 0, $start + length ($start_boundary) + $be, '');
+				substr($buffer, 0, $start + length($start_boundary) + $be, '');
 			}
 			if (not $field_sub->()) {
-				substr ($buffer, 0, $start + length ($start_boundary) + $be, '');
+				substr($buffer, 0, $start + length($start_boundary) + $be, '');
 			}
 		} else {
-			my $store_chunk = $lchnk > headers_block_size? $lchnk - headers_block_size: 0;
-			if (length ($buffer) < $store_chunk + headers_block_size * 2) {
-				if (length ($buffer) > headers_block_size * 2) {
-					$store_chunk = length ($buffer) - headers_block_size;
+			my $store_chunk = $lchnk > headers_block_size ? $lchnk - headers_block_size : 0;
+			if (length($buffer) < $store_chunk + headers_block_size * 2) {
+				if (length($buffer) > headers_block_size * 2) {
+					$store_chunk = length($buffer) - headers_block_size;
 				} else {
 					$store_chunk = 0;
 				}
 			}
 			if (defined $current_field_ref and ref $$current_field_ref eq 'PEF::Front::File') {
 				if ($store_chunk) {
-					$$current_field_ref->append(substr ($buffer, 0, $store_chunk));
-					substr ($buffer, 0, $store_chunk, '');
+					$$current_field_ref->append(substr($buffer, 0, $store_chunk));
+					substr($buffer, 0, $store_chunk, '');
 				}
 			} elsif (defined $current_field_ref) {
 				if ($store_chunk) {
-					$$current_field_ref .= substr ($buffer, 0, $store_chunk);
-					substr ($buffer, 0, $store_chunk, '');
+					$$current_field_ref .= substr($buffer, 0, $store_chunk);
+					substr($buffer, 0, $store_chunk, '');
 				}
 			} else {
 				$field_sub->();
