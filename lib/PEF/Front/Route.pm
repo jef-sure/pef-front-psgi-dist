@@ -117,7 +117,7 @@ sub rewrite_route {
 				}
 			}
 			if (%$rewrite_flags and exists $rewrite_flags->{R}) {
-				$http_response ||= PEF::Front::Response->new(base => $request->base);
+				$http_response ||= PEF::Front::Response->new(request => $request);
 				$http_response->redirect($npi, $rewrite_flags->{R});
 			}
 			if (   !$http_response
@@ -125,7 +125,7 @@ sub rewrite_route {
 				&& defined ($rewrite_flags->{L})
 				&& $rewrite_flags->{L} > 0)
 			{
-				$http_response = PEF::Front::Response->new(base => $request->base);
+				$http_response = PEF::Front::Response->new(request => $request);
 				$http_response->status($rewrite_flags->{L});
 			}
 			return $http_response
@@ -148,14 +148,14 @@ sub prepare_defaults {
 	if (cfg_url_contains_lang) {
 		($lang, $src, $method, $params) = $request->path =~ m{^/(\w{2})/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $lang) {
-			my $http_response = PEF::Front::Response->new(base => $request->base);
+			my $http_response = PEF::Front::Response->new(request => $request);
 			$http_response->redirect(cfg_location_error, 301);
 			return $http_response;
 		}
 	} else {
 		($src, $method, $params) = $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $method) {
-			my $http_response = PEF::Front::Response->new(base => $request->base);
+			my $http_response = PEF::Front::Response->new(request => $request);
 			$http_response->redirect(cfg_location_error, 301);
 			return $http_response;
 		}
@@ -177,7 +177,7 @@ sub prepare_defaults {
 			$form->{$p} = $v;
 		}
 	}
-	return PEF::Front::Response->new(base => $request->base, status => 404) if $method =~ /[\/.\\]/;
+	return PEF::Front::Response->new(request => $request, status => 404) if $method =~ /[\/.\\]/;
 	$method =~ s/[[:upper:]]\K([[:upper:]])/ \l$1/g;
 	$method =~ s/[[:lower:]]\K([[:upper:]])/ \l$1/g;
 	$method = lcfirst $method;
@@ -243,7 +243,7 @@ sub to_app {
 		{
 			my $lang = PEF::Front::NLS::guess_lang($request);
 			if ($request->method eq 'GET') {
-				$http_response = PEF::Front::Response->new(base => $request->base);
+				$http_response = PEF::Front::Response->new(request => $request);
 				$http_response->redirect("/$lang" . $request->request_uri);
 				return $http_response->response();
 			} else {
@@ -271,7 +271,7 @@ sub to_app {
 			my $cref = \&{$handler . '::handler'};
 			$cref->($request, $defaults);
 		} else {
-			$http_response = PEF::Front::Response->new(base => $request->base, status => 404);
+			$http_response = PEF::Front::Response->new(request => $request, status => 404);
 			www_static_handler($request, $http_response) if cfg_handle_static;
 			$http_response->response();
 		}
