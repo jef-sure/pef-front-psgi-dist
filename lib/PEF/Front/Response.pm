@@ -1,12 +1,13 @@
 package PEF::Front::Response;
 use strict;
 use warnings;
-use PEF::Front::Config;
 use Time::Duration::Parse;
+use Scalar::Util qw(blessed);
 use Encode;
 use utf8;
 use URI::Escape;
 use URI;
+use PEF::Front::Config;
 use PEF::Front::Headers;
 
 sub new {
@@ -27,6 +28,16 @@ sub new {
 		@cookies = %$cref;
 	} elsif (ref ($cref) eq 'ARRAY') {
 		@cookies = @$cref;
+	}
+	my $request = delete $args{request};
+	if($request && blessed($request) && $request->isa("PEF::Front::Request")) {
+		$base_url ||= $request->base;
+		if($request->out_headers) {
+			unshift @headers, $request->out_headers;
+		}
+		if($request->out_cookies) {
+			unshift @cookies, $request->out_cookies;
+		}
 	}
 	$body = [$body] if not ref $body;
 	my $self = bless {
