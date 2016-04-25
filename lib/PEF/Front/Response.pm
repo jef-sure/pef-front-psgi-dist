@@ -19,23 +19,23 @@ sub new {
 	my $cref     = delete $args{cookies} || [];
 	my @headers;
 	my @cookies;
-	if (ref ($href) eq 'HASH') {
+	if (ref($href) eq 'HASH') {
 		@headers = %$href;
-	} elsif (ref ($href) eq 'ARRAY') {
+	} elsif (ref($href) eq 'ARRAY') {
 		@headers = @$href;
 	}
-	if (ref ($cref) eq 'HASH') {
+	if (ref($cref) eq 'HASH') {
 		@cookies = %$cref;
-	} elsif (ref ($cref) eq 'ARRAY') {
+	} elsif (ref($cref) eq 'ARRAY') {
 		@cookies = @$cref;
 	}
 	my $request = delete $args{request};
-	if($request && blessed($request) && $request->isa("PEF::Front::Request")) {
+	if ($request && blessed($request) && $request->isa("PEF::Front::Request")) {
 		$base_url ||= $request->base;
-		if($request->out_headers) {
+		if (not $request->out_headers->is_empty) {
 			unshift @headers, $request->out_headers;
 		}
-		if($request->out_cookies) {
+		if (not $request->out_cookies->is_empty) {
 			unshift @cookies, $request->out_cookies;
 		}
 	}
@@ -87,19 +87,19 @@ sub get_cookie {
 
 sub set_body {
 	my ($self, $body) = @_;
-	$self->{body} = ref ($body) ? $body : [$body];
+	$self->{body} = ref($body) ? $body : [$body];
 }
 
 sub add_body {
 	my ($self, $body) = @_;
-	if (ref ($self->{body}) eq 'ARRAY') {
+	if (ref($self->{body}) eq 'ARRAY') {
 		push @{$self->{body}}, $body;
 	} else {
 		$self->set_body($body);
 	}
 }
 
-sub get_body { $_[0]->{body} }
+sub get_body {$_[0]->{body}}
 
 sub status {
 	my ($self, $status) = @_;
@@ -135,14 +135,13 @@ my @dow = qw(Sun Mon Tue Wed Thu Fri Sat);
 my @mon = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 
 sub expires {
-	my $expires = eval { parse_duration($_[0]) } || 0;
-	my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = gmtime (time + $expires);
-	sprintf "%s, %02d-%s-%04d %02d:%02d:%02d GMT", $dow[$wday], $mday, $mon[$mon], 1900 + $year, $hour, $min,
-	  $sec;
+	my $expires = eval {parse_duration($_[0])} || 0;
+	my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = gmtime(time + $expires);
+	sprintf "%s, %02d-%s-%04d %02d:%02d:%02d GMT", $dow[$wday], $mday, $mon[$mon], 1900 + $year, $hour, $min, $sec;
 }
 
 sub safe_encode_utf8 {
-	return encode_utf8($_[0]) if not ref ($_[0]) && utf8::is_utf8($_[0]);
+	return encode_utf8($_[0]) if not ref($_[0]) && utf8::is_utf8($_[0]);
 	$_[0];
 }
 
@@ -153,14 +152,13 @@ sub make_headers {
 		$_ = encode_utf8($_) if utf8::is_utf8($_);
 	}
 	my $cookies = $self->{cookies}->get_all_headers;
-	for (my $i = 0 ; $i < @$cookies ; $i += 2) {
+	for (my $i = 0; $i < @$cookies; $i += 2) {
 		my $name  = safe_encode_utf8($cookies->[$i]);
 		my $value = $cookies->[$i + 1];
 		$value = '' if not defined $value;
-		$value = {value => $value} unless ref ($value) eq 'HASH';
+		$value = {value => $value} unless ref($value) eq 'HASH';
 		no utf8;
-		my @cookie =
-		  (URI::Escape::uri_escape($name) . "=" . URI::Escape::uri_escape(safe_encode_utf8($value->{value})));
+		my @cookie = (URI::Escape::uri_escape($name) . "=" . URI::Escape::uri_escape(safe_encode_utf8($value->{value})));
 		push @cookie, "domain=" . $value->{domain}            if $value->{domain};
 		push @cookie, "path=" . $value->{path}                if $value->{path};
 		push @cookie, "expires=" . expires($value->{expires}) if $value->{expires};

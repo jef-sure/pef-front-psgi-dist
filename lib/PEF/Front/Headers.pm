@@ -18,12 +18,16 @@ sub new {
 					$self->{$fk} = $_[$i]->{$fk};
 				}
 			}
-			++$i;
-			redo;
+			--$i;
+			next;
 		}
 		$self->add_header($_[$i], $_[$i + 1]);
 	}
 	$self;
+}
+
+sub is_empty {
+	not %{$_[0]};
 }
 
 sub add_header {

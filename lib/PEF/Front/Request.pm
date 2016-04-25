@@ -107,18 +107,16 @@ sub note {
 
 sub out_headers {
 	my $self = shift;
-	if (not $self->{out_headers} and @_ > 1) {
-		my $env = $self->{env};
-		$self->{out_headers} = PEF::Front::HTTPHeaders->new(@_[1 .. $#_]);
+	if (not $self->{out_headers}) {
+		$self->{out_headers} = PEF::Front::HTTPHeaders->new;
 	}
 	$self->{out_headers};
 }
 
 sub out_cookies {
 	my $self = shift;
-	if (not $self->{out_cookies} and @_ > 1) {
-		my $env = $self->{env};
-		$self->{out_cookies} = PEF::Front::Headers->new(@_[1 .. $#_]);
+	if (not $self->{out_cookies}) {
+		$self->{out_cookies} = PEF::Front::Headers->new;
 	}
 	$self->{out_cookies};
 }
