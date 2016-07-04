@@ -245,6 +245,13 @@ sub subrequest {
 	PEF::Front::Ajax::handler($request, $context);
 }
 
+my %handlers = (
+	'/app'    => \&PEF::Front::RenderTT::handler,
+	'/ajax'   => \&PEF::Front::Ajax::handler,
+	'/get'    => \&PEF::Front::Ajax::handler,
+	'/submit' => \&PEF::Front::Ajax::handler,
+);
+
 sub to_app {
 	sub {
 		my $request       = PEF::Front::Request->new($_[0]);
@@ -266,14 +273,10 @@ sub to_app {
 		}
 		my $lang_offset = (cfg_url_contains_lang) ? 3 : 0;
 		my $handler;
-		if (length($request->path) > $lang_offset + 4) {
-			if (substr($request->path, $lang_offset, 4) eq '/app') {
-				$handler = "PEF::Front::RenderTT";
-			} elsif (substr($request->path, $lang_offset, 5) eq '/ajax'
-				|| substr($request->path, $lang_offset, 7) eq '/submit'
-				|| substr($request->path, $lang_offset, 4) eq '/get')
-			{
-				$handler = "PEF::Front::Ajax";
+		for my $prefix (keys %handlers) {
+			if (substr($request->path, $lang_offset, length $prefix) eq $prefix) {
+				$handler = $handlers{$prefix};
+				last;
 			}
 		}
 		if ($handler) {
@@ -281,9 +284,7 @@ sub to_app {
 			if (blessed($context) && $context->isa('PEF::Front::Response')) {
 				return $context->response();
 			}
-			no strict 'refs';
-			my $cref = \&{$handler . '::handler'};
-			$cref->($request, $context);
+			$handler->($request, $context);
 		} else {
 			$http_response = PEF::Front::Response->new(request => $request, status => 404);
 			www_static_handler($request, $http_response) if cfg_handle_static;
