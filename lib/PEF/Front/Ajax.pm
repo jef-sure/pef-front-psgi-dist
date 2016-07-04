@@ -25,7 +25,7 @@ sub ajax {
 	my $src           = $defaults->{src};
 	$request{method} = $defaults->{method};
 	$http_response->set_cookie(lang => {value => $lang, path => "/"});
-	my $vreq = eval { validate(\%request, $defaults) };
+	my $vreq = eval {validate(\%request, $defaults)};
 	my $response;
 	my $json = $src eq 'ajax';
 	$src = 'submit' if $src eq 'get';
@@ -34,12 +34,12 @@ sub ajax {
 	if (!$@) {
 		my $as = get_method_attrs($vreq => 'allowed_source');
 		if ($as
-			&& (   (!ref ($as) && $as ne $src)
-				|| (ref ($as) eq 'ARRAY' && !grep { $_ eq $src } @$as))
-		  )
+			&& (   (!ref($as) && $as ne $src)
+				|| (ref($as) eq 'ARRAY' && !grep {$_ eq $src} @$as))
+			)
 		{
 			cfg_log_level_error
-			  && $logger->({level => "error", message => "not allowed source $src"});
+				&& $logger->({level => "error", message => "not allowed source $src"});
 			$response = {result => 'INTERR', answer => 'Unallowed calling source', answer_args => []};
 			goto out;
 		}
@@ -54,16 +54,16 @@ sub ajax {
 		if (not $response) {
 			my $model = get_model($vreq);
 			cfg_log_level_debug
-			  && $logger->({level => "debug", message => "model: $model"});
-			if (index ($model, "::") >= 0) {
-				my $class = substr ($model, 0, rindex ($model, "::"));
+				&& $logger->({level => "debug", message => "model: $model"});
+			if (index($model, "::") >= 0) {
+				my $class = substr($model, 0, rindex($model, "::"));
 				eval "use $class;\n\$response = $model(\$vreq, \$defaults)";
 			} else {
 				$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
 			}
 			if ($@) {
 				cfg_log_level_error
-				  && $logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
+					&& $logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
 				$response = {result => 'INTERR', answer => 'Internal error', answer_args => []};
 				goto out;
 			}
@@ -72,7 +72,7 @@ sub ajax {
 			}
 		}
 		my $result = get_method_attrs($vreq => 'result');
-		if (defined ($result)) {
+		if (defined($result)) {
 			my $stash = {
 				response => $response,
 				form     => $form,
@@ -86,7 +86,7 @@ sub ajax {
 				V2EQUALS    => 0,
 				ENCODING    => "UTF-8"
 			);
-			$stash->{uri_unescape} = sub { uri_unescape @_ };
+			$stash->{uri_unescape} = sub {uri_unescape @_};
 			$tt->define_vmethod(
 				'text',
 				session => sub {
@@ -99,14 +99,14 @@ sub ajax {
 				}
 			);
 			my $err;
-			($new_loc, $response) =
-			  get_method_attrs($vreq => 'result_sub')->($response, $defaults, $stash, $http_response, $tt, $logger);
+			($new_loc, $response)
+				= get_method_attrs($vreq => 'result_sub')->($response, $defaults, $stash, $http_response, $tt, $logger);
 		}
 	} else {
 		cfg_log_level_error
-		  && $logger->({level => "error", message => "validate error: " . Dumper($@, \%request)});
+			&& $logger->({level => "error", message => "validate error: " . Dumper($@, \%request)});
 		$response = (
-			ref ($@) eq 'HASH'
+			ref($@) eq 'HASH'
 			? $@
 			: {result => 'INTERR', answer => 'Internal Error', answer_args => []}
 		);
@@ -115,8 +115,8 @@ sub ajax {
 		and 'ARRAY' eq ref $response->{answer_headers})
 	{
 		while (@{$response->{answer_headers}}) {
-			if (ref ($response->{answer_headers}[0])) {
-				if (ref ($response->{answer_headers}[0]) eq 'HASH') {
+			if (ref($response->{answer_headers}[0])) {
+				if (ref($response->{answer_headers}[0]) eq 'HASH') {
 					$http_response->add_header(%{$response->{answer_headers}[0]});
 				} else {
 					$http_response->add_header(@{$response->{answer_headers}[0]});
@@ -132,8 +132,8 @@ sub ajax {
 		and 'ARRAY' eq ref $response->{answer_cookies})
 	{
 		while (@{$response->{answer_cookies}}) {
-			if (ref ($response->{answer_cookies}[0])) {
-				if (ref ($response->{answer_cookies}[0]) eq 'HASH') {
+			if (ref($response->{answer_cookies}[0])) {
+				if (ref($response->{answer_cookies}[0]) eq 'HASH') {
 					$http_response->set_cookie(%{$response->{answer_cookies}[0]});
 				} else {
 					$http_response->set_cookie(@{$response->{answer_cookies}[0]});
@@ -145,10 +145,12 @@ sub ajax {
 			}
 		}
 	}
-  out:
-	if ($json) {
+out:
+	if ($defaults->{is_subrequest}) {
+		return $response;
+	} elsif ($json) {
 		if (exists $response->{answer} and not exists $response->{answer_no_nls}) {
-			my $args = exists ($response->{answer_args}) ? $response->{answer_args} : [];
+			my $args = exists($response->{answer_args}) ? $response->{answer_args} : [];
 			$args = [$args] if 'ARRAY' ne ref $args;
 			$response->{answer} = msg_get($lang, $response->{answer}, @$args)->{message};
 		}
@@ -165,30 +167,30 @@ sub ajax {
 				$new_loc = $loc;
 			}
 		}
-		if (!defined ($new_loc) || $new_loc eq '') {
+		if (!defined($new_loc) || $new_loc eq '') {
 			cfg_log_level_debug
-			  && $logger->({level => "debug", message => "outputting the answer"});
+				&& $logger->({level => "debug", message => "outputting the answer"});
 			my $ct = 'text/html; charset=utf-8';
-			if (   exists ($response->{answer_content_type})
-				&& defined ($response->{answer_content_type})
+			if (   exists($response->{answer_content_type})
+				&& defined($response->{answer_content_type})
 				&& $response->{answer_content_type})
 			{
 				$ct = $response->{answer_content_type};
-			} elsif (defined (my $yct = $http_response->content_type)) {
+			} elsif (defined(my $yct = $http_response->content_type)) {
 				$ct = $yct;
 			}
 			$http_response->content_type($ct);
 			if ($response->{answer} and not exists $response->{answer_no_nls} and $ct =~ /^text/) {
 				my $args = [];
 				$args = $response->{answer_args}
-				  if exists $response->{answer_args} and 'ARRAY' eq ref $response->{answer_args};
+					if exists $response->{answer_args} and 'ARRAY' eq ref $response->{answer_args};
 				$response->{answer} = msg_get($lang, $response->{answer}, @$args)->{message};
 			}
 			$http_response->set_body($response->{answer});
 			return $http_response->response();
 		} else {
 			cfg_log_level_debug
-			  && $logger->({level => "debug", message => "setting location: $new_loc"});
+				&& $logger->({level => "debug", message => "setting location: $new_loc"});
 			$http_response->redirect($new_loc);
 			return $http_response->response();
 		}
@@ -200,7 +202,7 @@ sub handler {
 	return sub {
 		my $responder = $_[0];
 		my $response = ajax($request, $defaults);
-		if (ref ($response->[2]) eq 'CODE') {
+		if (ref($response->[2]) eq 'CODE') {
 			my $coderef = pop @$response;
 			my $writer  = $responder->($response);
 			while (my ($stream) = $coderef->($request, $defaults)) {

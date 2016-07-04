@@ -23,11 +23,11 @@ my $tranpos = 3;
 sub add_route {
 	my @params = @_;
 	shift @params if @params & 1;
-	for (my $i = 0 ; $i < @params ; $i += 2) {
+	for (my $i = 0; $i < @params; $i += 2) {
 		my ($rule, $rdest) = @params[$i, $i + 1];
 		push @rewrite, [$rule, undef, {}, undef];
 		my $ri = $#rewrite;
-		if (ref ($rdest) eq 'ARRAY') {
+		if (ref($rdest) eq 'ARRAY') {
 			$rewrite[$ri][$nurlpos] = $rdest->[0];
 			my @flags = split /[, ]+/, $rdest->[1] if @$rdest > 1;
 			for my $f (@flags) {
@@ -39,56 +39,56 @@ sub add_route {
 				}
 				$rewrite[$ri][$flagpos]{$p} = $v;
 			}
-		} elsif (ref ($rdest) && ref ($rdest) ne 'CODE') {
+		} elsif (ref($rdest) && ref($rdest) ne 'CODE') {
 			die "bad routing rule at $rule";
 		} else {
 			$rewrite[$ri][$nurlpos] = $rdest;
 		}
-		if (ref ($rule) eq 'Regexp') {
-			if (!ref ($rewrite[$ri][$nurlpos])) {
-				$rewrite[$ri][$tranpos] =
-				    eval "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
-				  . $rewrite[$ri][$nurlpos] . "\""
-				  . (exists ($rewrite[$ri][$flagpos]{RE}) ? $rewrite[$ri][$flagpos]{RE} : "")
-				  . "; return }";
+		if (ref($rule) eq 'Regexp') {
+			if (!ref($rewrite[$ri][$nurlpos])) {
+				$rewrite[$ri][$tranpos]
+					= eval "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
+					. $rewrite[$ri][$nurlpos] . "\""
+					. (exists($rewrite[$ri][$flagpos]{RE}) ? $rewrite[$ri][$flagpos]{RE} : "")
+					. "; return }";
 			} else {
-				$rewrite[$ri][$tranpos] =
-				    eval "sub {my \$request = \$_[0]; "
-				  . "my \@params = \$request->path =~ "
-				  . (
-					exists ($rewrite[$ri][$flagpos]{RE})
+				$rewrite[$ri][$tranpos]
+					= eval "sub {my \$request = \$_[0]; "
+					. "my \@params = \$request->path =~ "
+					. (
+					exists($rewrite[$ri][$flagpos]{RE})
 					? "m\"$rule\"" . $rewrite[$ri][$flagpos]{RE} . ";"
 					: "m\"$rule\"; "
-				  )
-				  . "return \$rewrite[$ri][$nurlpos]->(\$request, \@params) if \@params;"
-				  . "return; }";
+					)
+					. "return \$rewrite[$ri][$nurlpos]->(\$request, \@params) if \@params;"
+					. "return; }";
 			}
-		} elsif (ref ($rule) eq 'CODE') {
-			if (not defined ($rewrite[$ri][$nurlpos])) {
+		} elsif (ref($rule) eq 'CODE') {
+			if (not defined($rewrite[$ri][$nurlpos])) {
 				$rewrite[$ri][$tranpos] = $rule;
 			} elsif (!ref $rewrite[$ri][$nurlpos]) {
-				$rewrite[$ri][$tranpos] =
-				    eval "sub {my \$request = \$_[0]; "
-				  . "return '$rewrite[$ri][$nurlpos]' if \$rewrite[$ri][$rulepos]->(\$request);"
-				  . "return; }";
+				$rewrite[$ri][$tranpos]
+					= eval "sub {my \$request = \$_[0]; "
+					. "return '$rewrite[$ri][$nurlpos]' if \$rewrite[$ri][$rulepos]->(\$request);"
+					. "return; }";
 			} else {
-				$rewrite[$ri][$tranpos] =
-				    eval "sub {my \$request = \$_[0]; "
-				  . "my \@params = \$rewrite[$ri][$rulepos]->(\$request);"
-				  . "return \$rewrite[$ri][$nurlpos]->(\$request, \@params) if \@params;"
-				  . "return; }";
+				$rewrite[$ri][$tranpos]
+					= eval "sub {my \$request = \$_[0]; "
+					. "my \@params = \$rewrite[$ri][$rulepos]->(\$request);"
+					. "return \$rewrite[$ri][$nurlpos]->(\$request, \@params) if \@params;"
+					. "return; }";
 			}
 		} else {
 			if (!ref $rewrite[$ri][$nurlpos]) {
-				$rewrite[$ri][$tranpos] =
-				    eval "sub {my \$request = \$_[0]; "
-				  . "return '$rewrite[$ri][$nurlpos]' if \$request->path eq '$rule';"
-				  . "return; }";
+				$rewrite[$ri][$tranpos]
+					= eval "sub {my \$request = \$_[0]; "
+					. "return '$rewrite[$ri][$nurlpos]' if \$request->path eq '$rule';"
+					. "return; }";
 			} else {
-				$rewrite[$ri][$tranpos] =
-				    eval "sub {my \$request = \$_[0]; "
-				  . "return \$rewrite[$ri][$nurlpos]->(\$request) if \$request->path eq '$rule';"
-				  . "return; }";
+				$rewrite[$ri][$tranpos]
+					= eval "sub {my \$request = \$_[0]; "
+					. "return \$rewrite[$ri][$nurlpos]->(\$request) if \$request->path eq '$rule';"
+					. "return; }";
 			}
 		}
 	}
@@ -102,7 +102,7 @@ sub import {
 
 sub rewrite_route {
 	my $request = $_[0];
-	for (my $i = 0 ; $i < @rewrite ; ++$i) {
+	for (my $i = 0; $i < @rewrite; ++$i) {
 		my $rewrite_func  = $rewrite[$i][$tranpos];
 		my $rewrite_flags = $rewrite[$i][$flagpos];
 		if ((my $npi = $rewrite_func->($request))) {
@@ -113,7 +113,7 @@ sub rewrite_route {
 				$npi           = $npi->[0];
 				$npi ||= '';
 				if ($rewrite_flags and not ref $rewrite_flags) {
-					$rewrite_flags = {map { my ($p, $v) = split /=/, $_, 2; (uc ($p), $v) } split /[, ]+/, $rewrite_flags};
+					$rewrite_flags = {map {my ($p, $v) = split /=/, $_, 2; (uc($p), $v)} split /[, ]+/, $rewrite_flags};
 				}
 			}
 			if (%$rewrite_flags and exists $rewrite_flags->{R}) {
@@ -121,17 +121,17 @@ sub rewrite_route {
 				$http_response->redirect($npi, $rewrite_flags->{R});
 			}
 			if (   !$http_response
-				&& exists ($rewrite_flags->{L})
-				&& defined ($rewrite_flags->{L})
+				&& exists($rewrite_flags->{L})
+				&& defined($rewrite_flags->{L})
 				&& $rewrite_flags->{L} > 0)
 			{
 				$http_response = PEF::Front::Response->new(request => $request);
 				$http_response->status($rewrite_flags->{L});
 			}
 			return $http_response
-			  if $http_response
-			  && blessed($http_response)
-			  && $http_response->isa('PEF::Front::Response');
+				if $http_response
+				&& blessed($http_response)
+				&& $http_response->isa('PEF::Front::Response');
 			$request->path($npi) if defined $npi;
 			last if %$rewrite_flags and exists $rewrite_flags->{L};
 		}
@@ -166,7 +166,7 @@ sub prepare_defaults {
 		my $i = 1;
 		for my $pv (@params) {
 			my ($p, $v) = split /-/, $pv, 2;
-			if (!defined ($v)) {
+			if (!defined($v)) {
 				$v = $p;
 				$p = 'cookie';
 				if (exists $form->{$p}) {
@@ -203,7 +203,7 @@ sub www_static_handler {
 	$path =~ s|/{2,}|/|g;
 	my @path = split /\//, $path;
 	my $valid = 1;
-	for (my $i = 0 ; $i < @path ; ++$i) {
+	for (my $i = 0; $i < @path; ++$i) {
 		if ($path[$i] eq '..') {
 			--$i;
 			if ($i < 1) {
@@ -231,15 +231,29 @@ sub www_static_handler {
 	}
 }
 
+sub subrequest {
+	my $request       = $_[0];
+	my $http_response = rewrite_route($request);
+	cfg_log_level_info
+		&& $request->logger->({level => "info", message => "serving sub-request: " . $request->path});
+	return $http_response if $http_response;
+	my $defaults = prepare_defaults($request);
+	if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
+		return $defaults;
+	}
+	$defaults->{is_subrequest} = 1;
+	PEF::Front::Ajax::handler($request, $defaults);
+}
+
 sub to_app {
 	sub {
 		my $request       = PEF::Front::Request->new($_[0]);
 		my $http_response = rewrite_route($request);
 		cfg_log_level_info
-		  && $request->logger->({level => "info", message => "serving request: " . $request->path});
+			&& $request->logger->({level => "info", message => "serving request: " . $request->path});
 		return $http_response->response() if $http_response;
 		if (cfg_url_contains_lang
-			&& (length ($request->path) < 4 || substr ($request->path, 3, 1) ne '/'))
+			&& (length($request->path) < 4 || substr($request->path, 3, 1) ne '/'))
 		{
 			my $lang = PEF::Front::NLS::guess_lang($request);
 			if ($request->method eq 'GET') {
@@ -252,12 +266,12 @@ sub to_app {
 		}
 		my $lang_offset = (cfg_url_contains_lang) ? 3 : 0;
 		my $handler;
-		if (length ($request->path) > $lang_offset + 4) {
-			if (substr ($request->path, $lang_offset, 4) eq '/app') {
+		if (length($request->path) > $lang_offset + 4) {
+			if (substr($request->path, $lang_offset, 4) eq '/app') {
 				$handler = "PEF::Front::RenderTT";
-			} elsif (substr ($request->path, $lang_offset, 5) eq '/ajax'
-				|| substr ($request->path, $lang_offset, 7) eq '/submit'
-				|| substr ($request->path, $lang_offset, 4) eq '/get')
+			} elsif (substr($request->path, $lang_offset, 5) eq '/ajax'
+				|| substr($request->path, $lang_offset, 7) eq '/submit'
+				|| substr($request->path, $lang_offset, 4) eq '/get')
 			{
 				$handler = "PEF::Front::Ajax";
 			}
