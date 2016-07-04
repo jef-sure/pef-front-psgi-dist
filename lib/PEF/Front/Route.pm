@@ -139,7 +139,7 @@ sub rewrite_route {
 	return;
 }
 
-sub prepare_defaults {
+sub prepare_context {
 	my $request = $_[0];
 	my $form    = $request->params;
 	my $cookies = $request->cookies;
@@ -237,12 +237,12 @@ sub subrequest {
 	cfg_log_level_info
 		&& $request->logger->({level => "info", message => "serving sub-request: " . $request->path});
 	return $http_response if $http_response;
-	my $defaults = prepare_defaults($request);
-	if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
-		return $defaults;
+	my $context = prepare_context($request);
+	if (blessed($context) && $context->isa('PEF::Front::Response')) {
+		return $context;
 	}
-	$defaults->{is_subrequest} = 1;
-	PEF::Front::Ajax::handler($request, $defaults);
+	$context->{is_subrequest} = 1;
+	PEF::Front::Ajax::handler($request, $context);
 }
 
 sub to_app {
@@ -277,13 +277,13 @@ sub to_app {
 			}
 		}
 		if ($handler) {
-			my $defaults = prepare_defaults($request);
-			if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
-				return $defaults->response();
+			my $context = prepare_context($request);
+			if (blessed($context) && $context->isa('PEF::Front::Response')) {
+				return $context->response();
 			}
 			no strict 'refs';
 			my $cref = \&{$handler . '::handler'};
-			$cref->($request, $defaults);
+			$cref->($request, $context);
 		} else {
 			$http_response = PEF::Front::Response->new(request => $request, status => 404);
 			www_static_handler($request, $http_response) if cfg_handle_static;

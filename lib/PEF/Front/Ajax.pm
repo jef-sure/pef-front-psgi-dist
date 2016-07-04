@@ -15,17 +15,17 @@ use PEF::Front::NLS;
 use PEF::Front::Response;
 
 sub ajax {
-	my ($request, $defaults) = @_;
+	my ($request, $context) = @_;
 	my $form          = $request->params;
 	my $cookies       = $request->cookies;
 	my $logger        = $request->logger;
 	my $http_response = PEF::Front::Response->new(request => $request);
-	my $lang          = $defaults->{lang};
+	my $lang          = $context->{lang};
 	my %request       = %$form;
-	my $src           = $defaults->{src};
-	$request{method} = $defaults->{method};
+	my $src           = $context->{src};
+	$request{method} = $context->{method};
 	$http_response->set_cookie(lang => {value => $lang, path => "/"});
-	my $vreq = eval {validate(\%request, $defaults)};
+	my $vreq = eval {validate(\%request, $context)};
 	my $response;
 	my $json = $src eq 'ajax';
 	$src = 'submit' if $src eq 'get';
@@ -57,7 +57,7 @@ sub ajax {
 				&& $logger->({level => "debug", message => "model: $model"});
 			if (index($model, "::") >= 0) {
 				my $class = substr($model, 0, rindex($model, "::"));
-				eval "use $class;\n\$response = $model(\$vreq, \$defaults)";
+				eval "use $class;\n\$response = $model(\$vreq, \$context)";
 			} else {
 				$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
 			}
@@ -77,7 +77,8 @@ sub ajax {
 				response => $response,
 				form     => $form,
 				cookies  => $cookies,
-				defaults => $defaults,
+				defaults => $context,
+				context  => $context,
 				request  => $vreq,
 				result   => $response->{result},
 			};
@@ -90,17 +91,17 @@ sub ajax {
 			$tt->define_vmethod(
 				'text',
 				session => sub {
-					$defaults->{session} ||= PEF::Front::Session->new($request);
+					$context->{session} ||= PEF::Front::Session->new($request);
 					if (@_) {
-						return $defaults->{session}->data->{$_[0]};
+						return $context->{session}->data->{$_[0]};
 					} else {
-						return $defaults->{session}->data;
+						return $context->{session}->data;
 					}
 				}
 			);
 			my $err;
 			($new_loc, $response)
-				= get_method_attrs($vreq => 'result_sub')->($response, $defaults, $stash, $http_response, $tt, $logger);
+				= get_method_attrs($vreq => 'result_sub')->($response, $context, $stash, $http_response, $tt, $logger);
 		}
 	} else {
 		cfg_log_level_error
@@ -146,7 +147,7 @@ sub ajax {
 		}
 	}
 out:
-	if ($defaults->{is_subrequest}) {
+	if ($context->{is_subrequest}) {
 		return $response;
 	} elsif ($json) {
 		if (exists $response->{answer} and not exists $response->{answer_no_nls}) {
@@ -198,14 +199,14 @@ out:
 }
 
 sub handler {
-	my ($request, $defaults) = @_;
+	my ($request, $context) = @_;
 	return sub {
 		my $responder = $_[0];
-		my $response = ajax($request, $defaults);
+		my $response = ajax($request, $context);
 		if (ref($response->[2]) eq 'CODE') {
 			my $coderef = pop @$response;
 			my $writer  = $responder->($response);
-			while (my ($stream) = $coderef->($request, $defaults)) {
+			while (my ($stream) = $coderef->($request, $context)) {
 				$writer->write($stream);
 			}
 			$writer->close;

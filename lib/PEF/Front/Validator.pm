@@ -71,7 +71,10 @@ sub _build_validator {
 		my ($default) = @_;
 		my $check_defaults = '';
 		if ($default !~ /^($RE{num}{int}|$RE{num}{real})$/) {
-			if ($default =~ /^defaults\.([\w\d].*)/) {
+			if ($default =~ /^context\.([\w\d].*)/) {
+				$default        = "$def {$1}";
+				$check_defaults = "exists($def {$1})";
+			} elsif ($default =~ /^defaults\.([\w\d].*)/) {
 				$default        = "$def {$1}";
 				$check_defaults = "exists($def {$1})";
 			} elsif ($default =~ /^headers\.(.*)/) {
@@ -519,7 +522,7 @@ CP
 	}
 	if (not exists $value->{secure}) {
 		$ret .= <<CP;
-		(\$defaults->{scheme} eq 'https'?(secure => 1): ()),
+		(\$context->{scheme} eq 'https'?(secure => 1): ()),
 CP
 	}
 	$ret .= <<CP;
@@ -541,7 +544,7 @@ sub _make_rules_parser {
 				$rw .= "\t\t\$new_location = " . make_value_parser($r) . ";\n\t\tlast if \$new_location;\n";
 			}
 			$rw      .= "\t}\n";
-			$sub_int .= "\tif(\$defaults->{src} ne 'ajax') { $rw }";
+			$sub_int .= "\tif(\$context->{src} ne 'ajax') { $rw }";
 		} elsif ($cmd eq 'set-cookie') {
 			for my $c (keys %{$start->{$cmd}}) {
 				$sub_int .= _make_cookie_parser($c => $start->{$cmd}{$c});
@@ -580,10 +583,10 @@ sub _make_rules_parser {
 		} elsif ($cmd eq 'filter') {
 			my $full_func;
 			my $use_class;
-			if (index ($start->{$cmd}, 'PEF::Core::') == 0) {
+			if (index ($start->{$cmd}, 'PEF::Front::') == 0) {
 				$full_func = $start->{$cmd};
 				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
-				$sub_int .= "\teval {use $use_class; $full_func(\$response, \$defaults)};\n";
+				$sub_int .= "\teval {use $use_class; $full_func(\$response, \$context)};\n";
 			} else {
 				$full_func = cfg_app_namespace . "OutFilter::" . $start->{$cmd};
 				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
@@ -594,7 +597,7 @@ sub _make_rules_parser {
 					message => $@,
 				  }
 				  if $@;
-				$sub_int .= "\teval {$full_func(\$response, \$defaults)};\n";
+				$sub_int .= "\teval {$full_func(\$response, \$context)};\n";
 			}
 			$sub_int .= <<MRP;
 			if (\$\@) {
@@ -616,7 +619,7 @@ sub _build_result_processor {
 	my $result_rules = $_[0];
 	my $result_sub   = <<RSUB;
 	sub {
-		my (\$response, \$defaults, \$stash, \$http_response, \$tt, \$logger) = \@_;
+		my (\$response, \$context, \$stash, \$http_response, \$tt, \$logger) = \@_;
 		my \$new_location;
 		my \%rc = (
 RSUB
@@ -749,7 +752,7 @@ sub load_validation_rules {
 }
 
 sub validate {
-	my ($request, $defaults) = @_;
+	my ($request, $context) = @_;
 	my $method = $request->{method}
 	  or croak(
 		{   result => 'INTERR',
@@ -757,7 +760,7 @@ sub validate {
 		}
 	  );
 	load_validation_rules($method);
-	$model_cache{$method}{code}->($request, $defaults);
+	$model_cache{$method}{code}->($request, $context);
 }
 
 sub get_method_attrs {

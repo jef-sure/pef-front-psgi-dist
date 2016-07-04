@@ -15,14 +15,14 @@ use PEF::Front::Response;
 use Sub::Name;
 
 sub handler {
-	my ($request, $defaults) = @_;
+	my ($request, $context) = @_;
 	my $form          = $request->params;
 	my $cookies       = $request->cookies;
 	my $logger        = $request->logger;
 	my $http_response = PEF::Front::Response->new(request => $request);
-	my $lang          = $defaults->{lang};
+	my $lang          = $context->{lang};
 	$http_response->set_cookie(lang => {value => $lang, path => "/"});
-	my $template = delete $defaults->{method};
+	my $template = delete $context->{method};
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
 	my $found         = 0;
@@ -41,10 +41,10 @@ sub handler {
 		$http_response->status(404);
 		return $http_response->response();
 	}
-	$defaults->{template}  = $template;
-	$defaults->{time}      = time;
-	$defaults->{gmtime}    = [gmtime];
-	$defaults->{localtime} = [localtime];
+	$context->{template}  = $template;
+	$context->{time}      = time;
+	$context->{gmtime}    = [gmtime];
+	$context->{localtime} = [localtime];
 	my $model = subname model => sub {
 		my %req;
 		my $method;
@@ -56,7 +56,7 @@ sub handler {
 			}
 		}
 		$req{method} = $method if defined $method;
-		my $vreq = eval { validate(\%req, $defaults) };
+		my $vreq = eval { validate(\%req, $context) };
 		my $response;
 		if (!$@) {
 			my $as = get_method_attrs($vreq => 'allowed_source');
@@ -87,7 +87,7 @@ sub handler {
 				  && $logger->({level => "debug", message => "model: $model"});
 				if (index ($model, "::") >= 0) {
 					my $class = substr ($model, 0, rindex ($model, "::"));
-					eval "use $class;\n\$response = $model(\$vreq, \$defaults)";
+					eval "use $class;\n\$response = $model(\$vreq, \$context)";
 				} else {
 					$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
 				}
@@ -239,11 +239,11 @@ sub handler {
 		'text',
 		session => subname(
 			session => sub {
-				$defaults->{session} ||= PEF::Front::Session->new($request);
+				$context->{session} ||= PEF::Front::Session->new($request);
 				if (@_) {
-					return $defaults->{session}->data->{$_[0]};
+					return $context->{session}->data->{$_[0]};
 				} else {
-					return $defaults->{session}->data;
+					return $context->{session}->data;
 				}
 			}
 		)
@@ -252,7 +252,7 @@ sub handler {
 	$http_response->set_body('');
 	return sub {
 		my $responder = $_[0];
-		$tt->process($template_file, $defaults, \$http_response->get_body->[0])
+		$tt->process($template_file, $context, \$http_response->get_body->[0])
 		  or cfg_log_level_error && $logger->({level => "error", message => "error: " . $tt->error()});
 		$responder->($http_response->response());
 	};
