@@ -11,6 +11,8 @@ use PEF::Front::Config;
 use XML::Simple;
 use URI;
 
+my $coro_ae = $INC{'Coro/AnyEvent.pm'} ? 1 : 0;
+
 sub new {
 	my ($class, $env) = @_;
 	Carp::croak(q{$env is required})
@@ -239,7 +241,7 @@ sub _parse_request_body {
 	my $read_body_sub = sub {
 		$self->{raw_body} = '';
 		my $buffer;
-		while ($cl && $self->_input->read($buffer, $cl)) {
+		while ($cl && (!$coro_ae || Coro::AnyEvent::readable $self->_input) && $self->_input->read($buffer, $cl)) {
 			$self->{raw_body} .= $buffer;
 			$cl -= length $buffer;
 		}
@@ -288,7 +290,10 @@ sub _parse_multipart_form {
 		my $chunk;
 		my $start = index($buffer, $start_boundary);
 		$start = index($buffer, $end_boundary) if $start == -1;
-		$buffer .= $chunk if $start == -1 && $input->read($chunk, read_chunk_size);
+		$buffer .= $chunk
+			if $start == -1
+			&& (!$coro_ae || Coro::AnyEvent::readable $self->_input)
+			&& $input->read($chunk, read_chunk_size);
 		last if $buffer eq '';
 		$start = index($buffer, $start_boundary) if $start == -1;
 		$start = index($buffer, $end_boundary)   if $start == -1;
@@ -411,11 +416,11 @@ PEF::Front::Request - HTTP request object from PSGI env hash
 package My::Local::Test;
 
   sub test {
-    my ($msg, $defaults) = @_;
+    my ($msg, $context) = @_;
     return {
         result    => "OK",
         data      => [1, 2],
-        path_info => $defaults->{request}->path_info
+        path_info => $context->{request}->path_info
     };
   }
 
@@ -427,7 +432,7 @@ PEF::Front framework.
 =head1 CAVEAT
 
 This module is intended to be used by web application developers only in rare circumstances.
-Developers can receive an object of this type in "Local", "InFilter" and "OutFilter" handlers via hash "defaults". 
+Developers can receive an object of this type in "Local", "InFilter" and "OutFilter" handlers via hash "context". 
 
 =head1 METHODS
 
