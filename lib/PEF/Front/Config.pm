@@ -70,6 +70,7 @@ my @std_const_params = qw{
 };
 
 my @std_var_params = qw{
+	cfg_context_post_hook
 	cfg_template_dir
 	cfg_model_rpc
 	cfg_oauth_client_id
@@ -179,6 +180,8 @@ sub std_www_static_captchas_path {
 		'/captchas/';
 	}
 }
+
+sub std_context_post_hook { }
 
 sub std_template_dir {
 	cfg_template_dir_contains_lang()

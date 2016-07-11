@@ -25,6 +25,9 @@ sub ajax {
 	my $src           = $context->{src};
 	$request{method} = $context->{method};
 	$http_response->set_cookie(lang => {value => $lang, path => "/"});
+	if (\&PEF::Front::Config::cfg_context_post_hook != \&PEF::Front::Config::std_context_post_hook) {
+		cfg_context_post_hook($context);
+	}
 	my $vreq = eval {validate(\%request, $context)};
 	my $response;
 	my $json = $src eq 'ajax';

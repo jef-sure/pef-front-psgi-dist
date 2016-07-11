@@ -45,6 +45,9 @@ sub handler {
 	$context->{time}      = time;
 	$context->{gmtime}    = [gmtime];
 	$context->{localtime} = [localtime];
+	if(\&PEF::Front::Config::cfg_context_post_hook != \&PEF::Front::Config::std_context_post_hook) {
+		cfg_context_post_hook($context);
+	}
 	my $model = subname model => sub {
 		my %req;
 		my $method;
