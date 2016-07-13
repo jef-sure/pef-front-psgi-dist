@@ -16,42 +16,42 @@ use base 'Exporter';
 
 our @EXPORT = qw(get post patch put delete trace websocket sse);
 
-sub get {
+sub get ($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::GET";
 }
 
-sub post {
+sub post ($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::POST";
 }
 
-sub patch {
+sub patch ($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::PATCH";
 }
 
-sub put {
+sub put ($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::PUT";
 }
 
-sub delete {
+sub delete ($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::DELETE";
 }
 
-sub trace {
+sub trace($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::TRACE";
 }
 
-sub websocket {
+sub websocket ($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::WEBSOCKET";
 }
 
-sub sse {
+sub sse ($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::SSE";
 }
