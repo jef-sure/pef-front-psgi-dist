@@ -24,7 +24,7 @@ sub new {
 sub env               {$_[0]->{env}}
 sub remote_ip         {$_[0]->{env}{REMOTE_ADDR}}
 sub protocol          {$_[0]->{env}{SERVER_PROTOCOL}}
-sub method            {$_[0]->{env}{REQUEST_METHOD}}
+sub http_method       {$_[0]->{env}{REQUEST_METHOD}}
 sub port              {$_[0]->{env}{SERVER_PORT}}
 sub user              {$_[0]->{env}{REMOTE_USER}}
 sub request_uri       {$_[0]->{env}{REQUEST_URI}}
@@ -49,6 +49,21 @@ sub set_out_cookie    {$_[0]->out_cookies->set_header($_[1] => $_[2])}
 sub remove_out_cookie {$_[0]->out_cookies->remove_header($_[1])}
 sub get_out_cookie    {$_[0]->out_cookies->get_header($_[1])}
 
+sub method {
+	my $xm = $_[0]{method};
+	return $xm if $xm;
+	if (my $hmo = $_[0]->{env}{X_HTTP_METHOD_OVERRIDE}) {
+		$_[0]{method} = uc $hmo;
+	} elsif ($_[0]->{env}{UPGRADE} eq 'WebSocket' && $_[0]->{env}{CONNECTION} eq 'Upgrade') {
+		$_[0]{method} = 'WEBSOCKET';
+	} elsif ($_[0]->{env}{ACCEPT} eq 'text/event-stream') {
+		$_[0]{method} = 'SSE';
+	} else {
+		$_[0]{method} = $_[0]->{env}{REQUEST_METHOD};
+	}
+	$_[0]{method};
+}
+
 sub logger {
 	my $self = $_[0];
 	cfg_logger($self)
@@ -58,8 +73,7 @@ sub logger {
 sub _parse {
 	my $self = $_[0];
 	$self->_parse_query_params;
-	$self->_parse_request_body if $self->method eq 'POST';
-
+	$self->_parse_request_body if $self->{env}{CONTENT_LENGTH} || $self->{env}{CONTENT_TYPE};
 }
 
 sub params {
@@ -163,7 +177,7 @@ sub cookies {
 	$self->{cookies} = \%results;
 }
 
-sub php_jquery_param {
+sub _php_jquery_param {
 	my ($root, $path, $value) = @_;
 	my @struct = $path =~ /\[?([^\[\]]+)\]?/g;
 	return if !@struct;
@@ -198,7 +212,7 @@ sub _parse_urlencoded {
 			}
 			split(/=/, $pair, 2);
 		if (index($name, "[") >= 0 && index($name, "]") > 0) {
-			php_jquery_param($form, $name, $value);
+			_php_jquery_param($form, $name, $value);
 		} else {
 			$form->{$name} = $value if defined $name and $name ne '';
 		}
@@ -268,8 +282,8 @@ sub _parse_request_body {
 	return $self->{body_params};
 }
 
-sub headers_block_size() {256}
-sub read_chunk_size()    {32768}
+sub _headers_block_size() {256}
+sub _read_chunk_size()    {32768}
 
 sub _parse_multipart_form {
 	my $self   = $_[0];
@@ -293,7 +307,7 @@ sub _parse_multipart_form {
 		$buffer .= $chunk
 			if $start == -1
 			&& (!$coro_ae || Coro::AnyEvent::readable $self->_input)
-			&& $input->read($chunk, read_chunk_size);
+			&& $input->read($chunk, _read_chunk_size);
 		last if $buffer eq '';
 		$start = index($buffer, $start_boundary) if $start == -1;
 		$start = index($buffer, $end_boundary)   if $start == -1;
@@ -320,7 +334,7 @@ sub _parse_multipart_form {
 				$name ||= '';
 				utf8::decode($name);
 				if (index($name, "[") >= 0 && index($name, "]") > 0) {
-					$current_field_ref = php_jquery_param($form, $name, '');
+					$current_field_ref = _php_jquery_param($form, $name, '');
 				} else {
 					$current_field_ref = \$form->{$name};
 				}
@@ -378,10 +392,10 @@ sub _parse_multipart_form {
 				substr($buffer, 0, $start + length($start_boundary) + $be, '');
 			}
 		} else {
-			my $store_chunk = $lchnk > headers_block_size ? $lchnk - headers_block_size : 0;
-			if (length($buffer) < $store_chunk + headers_block_size * 2) {
-				if (length($buffer) > headers_block_size * 2) {
-					$store_chunk = length($buffer) - headers_block_size;
+			my $store_chunk = $lchnk > _headers_block_size ? $lchnk - _headers_block_size : 0;
+			if (length($buffer) < $store_chunk + _headers_block_size * 2) {
+				if (length($buffer) > _headers_block_size * 2) {
+					$store_chunk = length($buffer) - _headers_block_size;
 				} else {
 					$store_chunk = 0;
 				}
@@ -442,36 +456,43 @@ you expect it to.
 
 =over 2
 
-=item new
+=item new($env)
 
     PEF::Front::Request->new( $env );
 
-Creates a new request object from supplied $env hash. Intended for internal use only.
+Creates a new request object from supplied $env hash.
 
-=item env
+=item env()
 
 Returns the shared PSGI environment hash reference. This is a
 reference, so writing to this environment passes through during the
 whole PSGI request/response cycle.
 
-=item remote_ip
+=item remote_ip()
 
 Returns the IP address of the client (C<REMOTE_ADDR>).
 
-=item method
+=item http_method()
 
-Contains the request method (C<GET>, C<POST>, C<HEAD>, etc).
+Contains the request method (C<GET>, C<POST>, C<HEAD>, etc) from HTTP 
+protocol directly.
 
-=item protocol
+=item method()
+
+Contains the request method (C<GET>, C<POST>, C<HEAD>, etc) from HTTP protocol
+but it understands also C<X-HTTP-Method-Override> header and C<WEBSOCKET>, 
+C<SSE> types of request.
+
+=item protocol()
 
 Returns the protocol (HTTP/1.0 or HTTP/1.1) used for the current request.
 
-=item request_uri
+=item request_uri()
 
 Returns the raw, undecoded request URI path. You probably do B<NOT>
 want to use this to dispatch requests.
 
-=item path_info
+=item path_info()
 
 Returns B<PATH_INFO> in the environment. Use this to get the local
 path for the requests.
@@ -481,39 +502,39 @@ path for the requests.
 Similar to C<path_info> but can be changed during internal routing process. 
 Decoded to utf8 perl internal representation.
 
-=item query_string
+=item query_string()
 
 Returns B<QUERY_STRING> in the environment. This is the undecoded
 query string in the request URI.
 
-=item script_name
+=item script_name()
 
 Returns B<SCRIPT_NAME> in the environment. This is the absolute path
 where your application is hosted. B<NOT TESTED>
 
-=item scheme
+=item scheme()
 
 Returns the scheme (C<http> or C<https>) of the request.
 
-=item secure
+=item secure()
 
 Returns true or false, indicating whether the connection is secure (https).
 
-=item uri
+=item uri()
 
 Returns an URI object for the current request. 
 
 Every time this method is called it returns a new, cloned URI object.
 
-=item logger
+=item logger()
 
-Returns (optional) C<psgix.logger> code reference. When it exists,
-your application is supposed to send the log message to this logger,
-using:
+Returns (optional) configured C<cfg_logger> or C<psgix.logger> code reference.
+When it exists, your application is supposed to send the log message to this 
+logger, using:
 
   $req->logger->({ level => 'debug', message => "This is a debug message" });
 
-=item cookies
+=item cookies()
 
 Returns a reference to a hash containing the cookies. Values are
 strings that are sent by clients and are URI decoded.
@@ -524,48 +545,52 @@ that causes issues for you, you may have to use modules like
 CGI::Simple::Cookie to parse C<<$request->header('Cookies')>> by
 yourself.
 
-=item params
+=item params()
 
 Returns a hash reference containing (merged) GET
 and POST parameters.
 
-=item raw_body
+=item raw_body()
 
 Returns the request content in an undecoded byte string for POST requests.
 
-=item base
+=item hostname()
+
+Returns hostname of current request.
+
+=item base()
 
 Returns full URL string of current request.
 
-=item user
+=item user()
 
 Returns C<REMOTE_USER> if it's set.
 
-=item headers
+=item headers()
 
 Returns an L<PEF::Front::HTTPHeaders> object containing the headers for the current request.
 
-=item content_encoding
+=item content_encoding()
 
 Shortcut to $req->headers->get_header("content_encoding").
 
-=item content_length
+=item content_length()
 
 Returns length of content.
 
-=item content_type
+=item content_type()
 
 Returns Content-Type header value.
 
-=item header
+=item header()
 
 Shortcut to $req->headers->get_header.
 
-=item referer
+=item referer()
 
 Shortcut to $req->headers->get_header("referer").
 
-=item user_agent
+=item user_agent()
 
 Shortcut to $req->headers->get_header("user_agent").
 
@@ -574,16 +599,36 @@ Shortcut to $req->headers->get_header("user_agent").
 Returns GET and POST parameters. This is an alternative method for accessing parameters in
 $req->params. It B<does> allow setting or modifying query parameters.
 
+=item get_out_header($header)
+
+=item get_out_cookie($cookie)
+
+=item set_out_header($header, $value)
+
+=item set_out_cookie($cookie, $value)
+
+=item remove_out_header($header)
+
+=item remove_out_cookie($cookie)
+
+Set/get/remove headers and cookies that will be copied into response object.
+
+=item C<note($key, $value)>
+
+Set/get some extra info for request. Usefule during routing phase when 
+context is not made up yet.
+
 =back
 
 =head1 AUTHORS
 
-PEF Secure
+Anton Petrusevich. 
 
-=head1 LICENSE
+=head1 Copyright and License
+
+Copyright (c) 2014 - 2016 Anton Petrusevich. Some Rights Reserved.
 
 This library is free software; you can redistribute it and/or modify
-
 it under the same terms as Perl itself.
 
 =cut

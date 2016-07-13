@@ -12,7 +12,49 @@ use PEF::Front::NLS;
 use if cfg_handle_static(), 'File::LibMagic';
 use Encode;
 use URI::Escape;
-use Data::Dumper;
+use base 'Exporter';
+
+our @EXPORT = qw(get post patch put delete trace websocket sse);
+
+sub get {
+	my $rule = $_[0];
+	bless \$rule, "PEF::Front::Request::Method::GET";
+}
+
+sub post {
+	my $rule = $_[0];
+	bless \$rule, "PEF::Front::Request::Method::POST";
+}
+
+sub patch {
+	my $rule = $_[0];
+	bless \$rule, "PEF::Front::Request::Method::PATCH";
+}
+
+sub put {
+	my $rule = $_[0];
+	bless \$rule, "PEF::Front::Request::Method::PUT";
+}
+
+sub delete {
+	my $rule = $_[0];
+	bless \$rule, "PEF::Front::Request::Method::DELETE";
+}
+
+sub trace {
+	my $rule = $_[0];
+	bless \$rule, "PEF::Front::Request::Method::TRACE";
+}
+
+sub websocket {
+	my $rule = $_[0];
+	bless \$rule, "PEF::Front::Request::Method::WEBSOCKET";
+}
+
+sub sse {
+	my $rule = $_[0];
+	bless \$rule, "PEF::Front::Request::Method::SSE";
+}
 
 my @rewrite;
 my $rulepos = 0;
@@ -25,6 +67,13 @@ sub add_route {
 	shift @params if @params & 1;
 	for (my $i = 0; $i < @params; $i += 2) {
 		my ($rule, $rdest) = @params[$i, $i + 1];
+		my $check_method = '';
+		my $required_method;
+		if ($required_method = blessed $rule) {
+			$required_method =~ s/.*:://;
+			$rule         = $$rule;
+			$check_method = "return if \$request->method ne '$required_method';";
+		}
 		push @rewrite, [$rule, undef, {}, undef];
 		my $ri = $#rewrite;
 		if (ref($rdest) eq 'ARRAY') {
@@ -47,13 +96,14 @@ sub add_route {
 		if (ref($rule) eq 'Regexp') {
 			if (!ref($rewrite[$ri][$nurlpos])) {
 				$rewrite[$ri][$tranpos]
-					= eval "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
+					= eval
+					"sub {my \$request = \$_[0]; $check_method my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
 					. $rewrite[$ri][$nurlpos] . "\""
 					. (exists($rewrite[$ri][$flagpos]{RE}) ? $rewrite[$ri][$flagpos]{RE} : "")
 					. "; return }";
 			} else {
 				$rewrite[$ri][$tranpos]
-					= eval "sub {my \$request = \$_[0]; "
+					= eval "sub {my \$request = \$_[0]; $check_method "
 					. "my \@params = \$request->path =~ "
 					. (
 					exists($rewrite[$ri][$flagpos]{RE})
@@ -65,15 +115,22 @@ sub add_route {
 			}
 		} elsif (ref($rule) eq 'CODE') {
 			if (not defined($rewrite[$ri][$nurlpos])) {
-				$rewrite[$ri][$tranpos] = $rule;
+				if ($required_method) {
+					$rewrite[$ri][$tranpos] = sub {
+						return if $_[0]->method ne $required_method;
+						goto &$rule;
+					};
+				} else {
+					$rewrite[$ri][$tranpos] = $rule;
+				}
 			} elsif (!ref $rewrite[$ri][$nurlpos]) {
 				$rewrite[$ri][$tranpos]
-					= eval "sub {my \$request = \$_[0]; "
+					= eval "sub {my \$request = \$_[0]; $check_method "
 					. "return '$rewrite[$ri][$nurlpos]' if \$rewrite[$ri][$rulepos]->(\$request);"
 					. "return; }";
 			} else {
 				$rewrite[$ri][$tranpos]
-					= eval "sub {my \$request = \$_[0]; "
+					= eval "sub {my \$request = \$_[0]; $check_method "
 					. "my \@params = \$rewrite[$ri][$rulepos]->(\$request);"
 					. "return \$rewrite[$ri][$nurlpos]->(\$request, \@params) if \@params;"
 					. "return; }";
@@ -81,12 +138,12 @@ sub add_route {
 		} else {
 			if (!ref $rewrite[$ri][$nurlpos]) {
 				$rewrite[$ri][$tranpos]
-					= eval "sub {my \$request = \$_[0]; "
+					= eval "sub {my \$request = \$_[0]; $check_method "
 					. "return '$rewrite[$ri][$nurlpos]' if \$request->path eq '$rule';"
 					. "return; }";
 			} else {
 				$rewrite[$ri][$tranpos]
-					= eval "sub {my \$request = \$_[0]; "
+					= eval "sub {my \$request = \$_[0]; $check_method "
 					. "return \$rewrite[$ri][$nurlpos]->(\$request) if \$request->path eq '$rule';"
 					. "return; }";
 			}
@@ -283,4 +340,5 @@ sub to_app {
 		process_request(PEF::Front::Request->new($_[0]));
 	};
 }
+
 1;
