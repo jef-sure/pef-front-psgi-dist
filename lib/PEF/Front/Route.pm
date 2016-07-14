@@ -288,7 +288,7 @@ sub www_static_handler {
 	}
 }
 
-my %handlers = (
+our %handlers = (
 	'/app'    => \&PEF::Front::RenderTT::handler,
 	'/ajax'   => \&PEF::Front::Ajax::handler,
 	'/get'    => \&PEF::Front::Ajax::handler,
