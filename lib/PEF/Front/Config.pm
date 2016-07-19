@@ -146,7 +146,7 @@ sub std_captcha_db                   {cfg_project_dir() . "/var/captcha-db"}
 sub std_captcha_font                 {"giant"}
 sub std_captcha_image_init           {{}}
 sub std_captcha_image_class          {"PEF::Front::SecureCaptcha"}
-sub std_captcha_secret               {"very secret"}
+sub std_captcha_secret               {$app_namespace}
 sub std_captcha_expire_sec           {300}
 sub std_cache_file                   {cfg_project_dir() . "/var/cache/shared.cache"}
 sub std_cache_size                   {"8m"}
