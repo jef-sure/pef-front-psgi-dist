@@ -2,7 +2,7 @@
  
 =head1 NAME
  
-PEF::Front - B<P>erl B<E>ffective Web <F>ramework
+PEF::Front - B<P>erl B<E>ffective Web B<F>ramework
  
 =head1 SYNOPSIS
  
@@ -21,7 +21,7 @@ PEF::Front - B<P>erl B<E>ffective Web <F>ramework
   1;
   
   # $project_dir/templates/index.html
-  some L<Template::Alloy/"Template::Toolkit style usage"> template.
+  some Template-Toolkit style template.
 
 =head1 DESCRIPTION
 
@@ -96,7 +96,7 @@ There're components to easily make authorization on your site for B<Facebook>,
 B<GitHub>, B<Google>, B<LinkedIn>, B<MSN>, B<PayPal>, B<Vkontakte> 
 and B<Yandex> users.
 
-=item Internationalization support
+=item Localization support
 
 There's a message translation support in templates and handlers and 
 automatic language detection based on URL, HTTP headers and Geo IP.
@@ -108,9 +108,23 @@ captcha image generation is possible.
 
 =back
 
+=item B<Websockets and Server Sent Events>
+
+Basically these technologies require some event loop architecture to 
+reduce overhead on every connection. But it requires non-trivial callback
+code for series of complex queries to DB. 
+It is possible to make in quite "usual" code using L<Coro> + L<AnyEvent> 
+environment with L<DBIx::Connection::Pool> for pool of asynchronous 
+L<DBIx::Connector>s. Thre's even L<DBIx::Struct> ORM that supports 
+such a pool of connectors. 
+
+B<Websockets and Server Sent Events> are available as external modules.
+
 =back
 
 =head1 Your Application
+
+=head2 Project structure
 
 Typical directory structure of Your application is alike:
 
@@ -136,8 +150,113 @@ Typical directory structure of Your application is alike:
         + jss/
         + styles/
 
-You can redefine almost everyting here, except B<InFilter>, B<OutFilter> 
+You can redefine almost everything here except B<InFilter>, B<OutFilter> 
 and B<Local> directories.
+
+=head3 What is what
+
+=over
+
+=item bin 
+
+Different executables. startup.pl is one of them. Actually this file can have
+any name that is known to PSGI-server.
+
+=item $app
+
+Directory of main application code and AppFrontConfig.pm module. Framework 
+determines it automatically from path to loaded AppFrontConfig.pm module.
+
+=item $Project
+
+Directory structure of application modules.
+
+=item InFilter
+
+Optional modules for input data validation.
+
+=item OutFilter
+
+Optional modules for transformation of output data.
+
+=item Local
+
+Incoming request handlers. 
+
+=item model
+
+YAML-files with descriptions of model methods. Every file describes one method.
+
+=item templates
+
+Directory of templates. Currently only Template-Toolkit style is supported.
+
+=item var/cache
+
+Session data and cached responses of handlers. 
+ 
+=item var/captcha-db
+
+Database for generated captchas.
+
+=item var/tt_cache
+
+Cache of compiled templates.
+
+=item var/upload
+
+Root directory for uploaded files.
+
+=item www-static
+
+Directory of static content. This is typically served by some fast web-server 
+like L<Nginx|https://www.nginx.com/>.
+
+=item www-static/captchas
+
+Directory of generated captcha images. This is typically served by the same 
+web-server for static content.
+
+=back
+
+=head2 Minimal application
+
+Minimal application can consist of only two files: B<AppFrontConfig.pm>
+and B<setup.pl>. 
+
+It would look like this:
+
+  # MyApp::AppFrontConfig.pm
+  package MyApp::AppFrontConfig;
+  sub cfg_no_nls { 1 }
+  sub cfg_no_multilang_support { 1 }
+  
+  1;
+
+  # startup.pl
+  use MyApp::AppFrontConfig;
+  use PEF::Front::Response;
+  use PEF::Front::Route;
+  
+  PEF::Front::Route::add_route(
+   get '/' => sub {
+      PEF::Front::Response->new(headers => ['Content-Type' => 'text/plain'], body => 'Hello World!');
+    }
+  );
+  
+  PEF::Front::Route->to_app();
+ 
+You have to define minimal config and routes. Routes can return HTTP response directly. 
+
+=head1 More information
+
+There're guides and demos. 
+
+=over
+
+=item L<Configuration parameters|PEF::Front::Config>
+
+=back
 
 =cut
 

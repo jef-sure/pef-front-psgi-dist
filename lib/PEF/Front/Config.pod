@@ -1,0 +1,216 @@
+=head1 NAME
+
+B<PEF::Front::Config> - how to configure PEF::Front to suit your needs
+
+=head1 DESCRIPTION
+
+B<PEF::Front::Config> handles configuration of your apps. 
+The documentation for this module aims to describe how to change
+settings, and which settings are available.
+
+=head1 SETTINGS
+ 
+Subroutine names in your configuration module B<*::AppFrontConfig> define
+configuration parameters. This module has to be loaded first on startup.
+B<PEF::Front> has many sensible defaults but you have to provide some data.  
+ 
+  package MyApp::AppFrontConfig;
+  sub cfg_db_user      { "user" }
+  sub cfg_db_password  { "mypassword" }
+  sub cfg_db_name      { "mydb" }
+  1; 
+
+In these subroutines you can return some constants or load them from some 
+source. 
+
+You can define your own subroutines and export them to your handlers.
+B<PEF::Front::Config> has some limited functionality of L<Exporter>. 
+
+  package MyApp::AppFrontConfig;
+  our @EXPORT = qw(avatar_images_path);
+  sub avatar_images_path { cfg_www_static_dir() .'/images/avatars' }
+
+  # somewhere in handlers
+  package MyApp::Local::Avatar;
+  use PEF::Front::Config;
+
+  sub upload {
+    my ($req, $ctx) = @_;
+    my $upload_path = avatar_images_path();
+    # ...
+  }
+
+It works a little-bit non-trivial: B<PEF::Front> reads parameters from 
+MyApp::AppFrontConfig, determines the whole configuration and re-export
+it into MyApp::AppFrontConfig. This way you can use automatically calculated
+configuration data in your configuration subroutines. 
+
+B<< PEF::Front::Config::cfg( C<$config_key>) >> returns configuration 
+value for the given C<$config_key> if it doesn't require parameter.
+
+=head1 SUPPORTED SETTINGS
+ 
+=item B<cfg_app_namespace>
+
+Application modules namespace. By default it's calculated from full 
+name of your B<*::AppFrontConfig> module. But probably you can change it for
+some unknown reason.
+
+=item B<cfg_cache_file>
+
+Full path to cache file. 
+Default is C<cfg_project_dir() . "/var/cache/shared.cache">
+
+=item B<cfg_cache_method_expire>
+
+Default expire time for cached responses. 
+By default it's equal to 60 [seconds].
+
+=item B<cfg_cache_size>
+
+Cache size. Default is equal to "8m" = 8 Megabytes.
+
+=item B<cfg_captcha_db>
+
+Sets the directory to hold the database that will be used to store the current
+non-expired valid captcha tokens. 
+Default is C<cfg_project_dir() . "/var/captcha-db">
+
+=item B<cfg_captcha_expire_sec>
+
+Sets the number of seconds this captcha will remain valid. Default is 300.
+
+=item B<cfg_captcha_font>
+
+The absolute path to your TrueType (.ttf) font file. 
+Be aware that relative font paths are not recognized due to problems in the 
+libgd library. Default is "giant" - not a good font, you would better 
+change it.
+
+=item B<cfg_captcha_image_class>
+
+Allows to inject user's captcha image generation class. 
+Default is "PEF::Front::SecureCaptcha" which is really not very
+pretty but works. Captcha image generation class have to implement only
+one method: 
+
+  generate_image(
+    width      => $width,
+    height     => $height,
+    size       => $size,
+    str        => $str,
+    code       => $sha1,
+    out_folder => $cfg_www_static_captchas_dir,
+    font       => cfg_captcha_font(),
+    %$image_init,
+  )
+
+Where $image_init is optional hash reference 
+from B<cfg_captcha_image_init> parameter.
+
+=item B<cfg_captcha_image_init>
+
+Optional hash reference of extra values 
+for captcha's generate_image method.
+
+=item B<cfg_captcha_secret>
+
+Salt for secure captcha's code generation. Default is B<cfg_app_namespace>.
+
+=item B<cfg_captcha_symbols>
+
+Array of symbols for captcha's code.
+
+=item B<cfg_collect_unknown_msgid>
+
+Boolean value whether to collect or not not localized phrases. 
+You can translate these collected phrases later.
+
+=item B<cfg_cookie_unset_negative_expire>
+
+Cookie-unset sets expiration time of the cookie in the past. This parameter 
+says how much in the past. Default is -3600 seconds - 1 hour.  
+
+=item B<cfg_db_name>
+
+Default full DSN or PostgreSQL's database name. 
+Default is "pef" which is pretty useless. 
+Here "pef" really means "dbi:Pg:dbname=pef".
+
+=item B<cfg_db_password>
+
+Default password for DB user.
+
+=item B<cfg_db_reconnect_trys>
+
+How many times it tries to reconnect with 1 second pauses
+in case some DB connection failure. During this time all
+queries will be waiting for connection. They will fail after
+final failure or continue to work as if nothing happened if 
+connection finally comes back.
+
+=item B<cfg_db_user>
+
+Default DB user name.
+
+=item B<cfg_default_lang>
+
+=item B<cfg_handle_static>
+
+=item B<cfg_in_filter_dir>
+
+=item B<cfg_location_error>
+
+=item B<cfg_log_level_debug>
+
+=item B<cfg_log_level_error>
+
+=item B<cfg_log_level_info>
+
+=item B<cfg_model_dir>
+
+=item B<cfg_model_local_dir>
+
+=item B<cfg_model_rpc_admin_addr>
+
+=item B<cfg_model_rpc_admin_port>
+
+=item B<cfg_model_rpc_site_addr>
+
+=item B<cfg_model_rpc_site_port>
+
+=item B<cfg_no_multilang_support>
+
+=item B<cfg_no_nls>
+
+=item B<cfg_oauth_connect_timeout>
+
+=item B<cfg_out_filter_dir>
+
+=item B<cfg_project_dir>
+
+=item B<cfg_session_db_file>
+
+=item B<cfg_session_request_field>
+
+=item B<cfg_session_ttl>
+
+=item B<cfg_template_cache>
+
+=item B<cfg_template_dir_contains_lang>
+
+=item B<cfg_unknown_msgid_db>
+
+=item B<cfg_upload_dir>
+
+=item B<cfg_url_contains_lang>
+
+=item B<cfg_www_static_captchas_dir>
+
+=item B<cfg_www_static_captchas_path>
+
+=item B<cfg_www_static_dir>
+
+ 
+
+=cut
