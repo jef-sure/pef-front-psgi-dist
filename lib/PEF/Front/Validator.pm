@@ -732,7 +732,7 @@ sub load_validation_rules {
 		if (!exists $new_rules->{model}) {
 			$model = 'rpc_site';
 		} else {
-			if ($new_rules->{model} =~ /::/) {
+			if ($new_rules->{model} =~ /^\w+::/) {
 				if ($new_rules->{model} =~ /^PEF::Front/) {
 					$model = $new_rules->{model};
 				} else {
