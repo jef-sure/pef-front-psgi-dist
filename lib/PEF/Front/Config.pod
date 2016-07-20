@@ -307,12 +307,12 @@ This function calls "remote" model methods.
 Returns C<client id> of your application for given $service. 
 Default is 'anonymous'.
 
-=item B<cfg_oauth_client_secret>
+=item B<cfg_oauth_client_secret($service)>
 
 Returns C<client secret> of your application for given $service. 
 Default is 'anonymous_secret'.
 
-=item B<cfg_oauth_scopes>
+=item B<cfg_oauth_scopes($service)>
 
 Returns scopes for given $service. Default is quite sensible 
 for all supported services to obtain user info.
