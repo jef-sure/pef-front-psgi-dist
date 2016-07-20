@@ -50,6 +50,9 @@ value for the given C<$config_key> if it doesn't require parameter.
 
 =head1 SUPPORTED SETTINGS
  
+=over
+
+ 
 =item B<cfg_app_namespace>
 
 Application modules namespace. By default it's calculated from full 
