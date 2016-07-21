@@ -12,9 +12,9 @@ use PEF::Front::Config;
 use Sub::Name;
 use base 'Exporter';
 our @EXPORT = qw{
-  validate
-  get_model
-  get_method_attrs
+	validate
+	get_model
+	get_method_attrs
 };
 
 our %model_cache;
@@ -23,7 +23,7 @@ sub _collect_base_rules {
 	my ($method, $mr, $pr) = @_;
 	my %seen;
 	my %ret;
-	substr ($mr, 0, 1, '') if substr ($mr, 0, 1) eq '$';
+	substr($mr, 0, 1, '') if substr($mr, 0, 1) eq '$';
 	my $entry = $mr;
 	while (!exists $seen{$entry}) {
 		$seen{$entry} = undef;
@@ -32,13 +32,13 @@ sub _collect_base_rules {
 			answer      => 'Internal server error',
 			answer_args => [],
 			message     => "Validation $method error: unknow base rule '$entry' for '$pr'",
-		  }
-		  unless exists $model_cache{'-base-'}{rules}{params}{$entry};
+			}
+			unless exists $model_cache{'-base-'}{rules}{params}{$entry};
 		my $rules = $model_cache{'-base-'}{rules}{params}{$entry};
 		last if not defined $rules or (not ref $rules and $rules eq '');
 		if (not ref $rules) {
-			if (substr ($rules, 0, 1) eq '$') {
-				$entry = substr ($rules, 1);
+			if (substr($rules, 0, 1) eq '$') {
+				$entry = substr($rules, 1);
 			} else {
 				%ret = (regex => $rules, %ret);
 			}
@@ -47,7 +47,7 @@ sub _collect_base_rules {
 			if (exists $ret{base}) {
 				if (defined $ret{base} and $ret{base} ne '') {
 					$entry = $ret{base};
-					substr ($entry, 0, 1, '') if substr ($entry, 0, 1) eq '$';
+					substr($entry, 0, 1, '') if substr($entry, 0, 1) eq '$';
 				}
 				delete $ret{base};
 			}
@@ -82,6 +82,10 @@ sub _build_validator {
 				$h =~ s/\s*$//;
 				$h       = _quote_var($h);
 				$default = "$def {headers}->get_header($h)";
+			} elsif ($default =~ /^notes\.(.*\S)/) {
+				my $h = $1;
+				$h       = _quote_var($h);
+				$default = "$def {request}->note($h)";
 			} elsif ($default =~ /^cookies\.(.*)/) {
 				my $c = $1;
 				$c =~ s/\s*$//;
@@ -115,8 +119,8 @@ sub _build_validator {
 	};
 	my %attr_sub = (
 		regex => sub {
-			my $re = ref ($mr) ? $mr->{regex} : $mr;
-			return '' if !defined ($re) || $re eq '';
+			my $re = ref($mr) ? $mr->{regex} : $mr;
+			return '' if !defined($re) || $re eq '';
 			<<ATTR;
 		croak {
 			result => 'BADPARAM',
@@ -126,7 +130,7 @@ sub _build_validator {
 ATTR
 		},
 		captcha => sub {
-			return '' if !defined ($mr->{captcha}) || $mr->{captcha} eq '';
+			return '' if !defined($mr->{captcha}) || $mr->{captcha} eq '';
 			<<ATTR;
 			if($jsn {$pr} ne 'nocheck') {
 				croak {
@@ -138,8 +142,8 @@ ATTR
 ATTR
 		},
 		type => sub {
-			return '' if !defined ($mr->{type}) || $mr->{type} eq '';
-			my $type = uc (substr ($mr->{type}, 0, 1)) eq 'F' ? 'PEF::Front::File' : uc $mr->{type};
+			return '' if !defined($mr->{type}) || $mr->{type} eq '';
+			my $type = uc(substr($mr->{type}, 0, 1)) eq 'F' ? 'PEF::Front::File' : uc $mr->{type};
 			<<ATTR;
 			croak {
 				result => 'BADPARAM', 
@@ -149,7 +153,7 @@ ATTR
 ATTR
 		},
 		'max-size' => sub {
-			return '' if !defined ($mr->{'max-size'}) || $mr->{'max-size'} eq '';
+			return '' if !defined($mr->{'max-size'}) || $mr->{'max-size'} eq '';
 			<<ATTR;
 			croak {
 				result => 'BADPARAM', 
@@ -165,7 +169,7 @@ ATTR
 ATTR
 		},
 		'min-size' => sub {
-			return '' if !defined ($mr->{'min-size'}) || $mr->{'min-size'} eq '';
+			return '' if !defined($mr->{'min-size'}) || $mr->{'min-size'} eq '';
 			<<ATTR;
 			croak {
 				result => 'BADPARAM', 
@@ -181,11 +185,11 @@ ATTR
 ATTR
 		},
 		can => sub {
-			my $can = exists ($mr->{can}) ? $mr->{can} : $mr->{can_string};
-			return '' if !defined ($can);
-			my @can = ref ($can) ? @{$can} : ($can);
+			my $can = exists($mr->{can}) ? $mr->{can} : $mr->{can_string};
+			return '' if !defined($can);
+			my @can = ref($can) ? @{$can} : ($can);
 			return '' if !@can;
-			my $can_list = join ", ", map { _quote_var($_) } @can;
+			my $can_list = join ", ", map {_quote_var($_)} @can;
 			<<ATTR;
 			{
 				my \$found = 0;
@@ -205,10 +209,10 @@ ATTR
 ATTR
 		},
 		can_number => sub {
-			return '' if !defined ($mr->{can_number}) || $mr->{can_number} eq '';
-			my @can = ref ($mr->{can_number}) ? @{$mr->{can_number}} : ($mr->{can_number});
+			return '' if !defined($mr->{can_number}) || $mr->{can_number} eq '';
+			my @can = ref($mr->{can_number}) ? @{$mr->{can_number}} : ($mr->{can_number});
 			return '' if !@can;
-			my $can_list = join ", ", map { _quote_var($_) } @can;
+			my $can_list = join ", ", map {_quote_var($_)} @can;
 			<<ATTR;
 			{
 				my \$found = 0;
@@ -228,7 +232,7 @@ ATTR
 ATTR
 		},
 		'max' => sub {
-			return '' if !defined ($mr->{'max'}) || $mr->{'max'} eq '';
+			return '' if !defined($mr->{'max'}) || $mr->{'max'} eq '';
 			<<ATTR;
 			croak {
 				result => 'BADPARAM', 
@@ -238,7 +242,7 @@ ATTR
 ATTR
 		},
 		'min' => sub {
-			return '' if !defined ($mr->{'min'}) || $mr->{'min'} eq '';
+			return '' if !defined($mr->{'min'}) || $mr->{'min'} eq '';
 			<<ATTR;
 			croak {
 				result => 'BADPARAM', 
@@ -267,7 +271,7 @@ ATTR
 			}
 		},
 		filter => sub {
-			return '' if !defined ($mr->{filter}) || $mr->{filter} eq '';
+			return '' if !defined($mr->{filter}) || $mr->{filter} eq '';
 			my $filter_sub = '';
 			if ($mr->{filter} =~ /^\w+::/) {
 				my $fcall = cfg_app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);";
@@ -288,7 +292,7 @@ ATTR
 					croak \$response;
 				} else {
 ATTR
-				if (exists ($mr->{optional}) && $mr->{optional}) {
+				if (exists($mr->{optional}) && $mr->{optional}) {
 					$filter_sub .= <<ATTR;
 					delete $jsn {$pr}; 
 					cfg_log_level_info()
@@ -318,7 +322,7 @@ ATTR
 		}
 ATTR
 				my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
-				my $use_module = substr ($cl, 0, rindex ($cl, "::"));
+				my $use_module = substr($cl, 0, rindex($cl, "::"));
 				eval "use $use_module";
 				if ($@) {
 					croak {
@@ -328,10 +332,10 @@ ATTR
 					};
 				}
 			} else {
-				my $rearr =
-				    ref ($mr->{filter}) eq 'ARRAY' ? $mr->{filter}
-				  : ref ($mr->{filter})            ? []
-				  :                                  [$mr->{filter}];
+				my $rearr
+					= ref($mr->{filter}) eq 'ARRAY' ? $mr->{filter}
+					: ref($mr->{filter})            ? []
+					:                                 [$mr->{filter}];
 				for my $re (@$rearr) {
 					if ($re =~ /^(s|tr|y)\b/) {
 						$filter_sub .= <<ATTR;
@@ -352,25 +356,25 @@ ATTR
 	$attr_sub{can_string} = $attr_sub{can};
 	my @validator_checks;
 	for my $par (
-		sort { $a eq cfg_session_request_field() ? -1 : $b eq cfg_session_request_field() ? 1 : $a cmp $b }
+		sort {$a eq cfg_session_request_field() ? -1 : $b eq cfg_session_request_field() ? 1 : $a cmp $b}
 		keys %$method_params
-	  )
+		)
 	{
 		$pr = $par;
 		$mr = $method_params->{$pr};
 		$mr = '' if not defined $mr;
-		my $last_sym = substr ($pr, -1, 1);
+		my $last_sym = substr($pr, -1, 1);
 		if ($last_sym eq '%' || $last_sym eq '@' || $last_sym eq '*') {
 			my $type = $last_sym eq '%' ? 'HASH' : $last_sym eq '@' ? 'ARRAY' : 'FILE';
-			if (ref ($mr)) {
+			if (ref($mr)) {
 				$mr->{type} = $type;
 			} else {
 				$mr = {type => $type};
 			}
-			substr ($pr, -1, 1, '');
+			substr($pr, -1, 1, '');
 		}
 		$known_params{$pr} = undef;
-		if (!ref ($mr) and length $mr > 0 and substr ($mr, 0, 1) eq '$') {
+		if (!ref($mr) and length $mr > 0 and substr($mr, 0, 1) eq '$') {
 			$mr = _collect_base_rules($rules->{method}, $mr, $pr);
 		}
 		if (    ref $mr
@@ -390,9 +394,9 @@ ATTR
 		}
 		my $sub_test       = '';
 		my $validator_test = '';
-		for my $attr (sort { $a eq 'filter' ? 1 : $b eq 'filter' ? -1 : $a cmp $b } keys %$mr) {
-			substr ($attr, 0, 1, '') if substr ($attr, 0, 1) eq '^';
-			if (exists ($attr_sub{$attr})) {
+		for my $attr (sort {$a eq 'filter' ? 1 : $b eq 'filter' ? -1 : $a cmp $b} keys %$mr) {
+			substr($attr, 0, 1, '') if substr($attr, 0, 1) eq '^';
+			if (exists($attr_sub{$attr})) {
 				if ($attr eq 'default' || $attr eq 'value') {
 					$validator_test .= $attr_sub{$attr}();
 				} else {
@@ -406,13 +410,13 @@ ATTR
 				};
 			}
 		}
-		if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {
+		if (exists($mr->{optional}) && $mr->{optional} eq 'empty') {
 			$validator_test .= <<ATTR;
 			if(exists($jsn {$pr}) and $jsn {$pr} ne '') {
 $sub_test
 			}
 ATTR
-		} elsif (exists ($mr->{optional}) && $mr->{optional}) {
+		} elsif (exists($mr->{optional}) && $mr->{optional}) {
 			$validator_test .= <<ATTR;
 			if(exists($jsn {$pr})) {
 $sub_test
@@ -440,7 +444,7 @@ SESSION
 	my $validator_sub = "sub { \n";
 	$validator_sub .= join "", @validator_checks;
 	if ($extra_params_rule ne 'pass') {
-		my $known_params_list = join ", ", map { _quote_var($_) . " => undef" } keys %known_params;
+		my $known_params_list = join ", ", map {_quote_var($_) . " => undef"} keys %known_params;
 		$validator_sub .= <<PARAM;
 		    {
 				my \%known_params = ($known_params_list);
@@ -473,19 +477,19 @@ sub _quote_var {
 	my $d = Data::Dumper->new([$s]);
 	$d->Terse(1);
 	my $qs = $d->Dump;
-	substr ($qs, -1, 1, '') if substr ($qs, -1, 1) eq "\n";
+	substr($qs, -1, 1, '') if substr($qs, -1, 1) eq "\n";
 	return $qs;
 }
 
 sub make_value_parser {
 	my $value = $_[0];
 	my $ret   = _quote_var($value);
-	if (substr ($value, 0, 3) eq 'TT ') {
-		my $exp = substr ($value, 3);
+	if (substr($value, 0, 3) eq 'TT ') {
+		my $exp = substr($value, 3);
 		$exp = _quote_var($exp);
-		if (substr ($exp, 0, 1) eq "'") {
-			substr ($exp, 0,  1, '');
-			substr ($exp, -1, 1, '');
+		if (substr($exp, 0, 1) eq "'") {
+			substr($exp, 0,  1, '');
+			substr($exp, -1, 1, '');
 		}
 		$ret = <<VP;
 		do {
@@ -551,11 +555,11 @@ sub _make_rules_parser {
 			}
 		} elsif ($cmd eq 'unset-cookie') {
 			my $unset = $start->{$cmd};
-			if (ref ($unset) eq 'HASH') {
+			if (ref($unset) eq 'HASH') {
 				for my $c (keys %$unset) {
 					my $ca = {%{$start->{$cmd}{$c}}};
 					$ca->{expires} = cfg_cookie_unset_negative_expire
-					  if not exists $ca->{expires};
+						if not exists $ca->{expires};
 					$ca->{value} = '' if not exists $ca->{value};
 					$sub_int .= _make_cookie_parser($c => $ca);
 				}
@@ -583,20 +587,20 @@ sub _make_rules_parser {
 		} elsif ($cmd eq 'filter') {
 			my $full_func;
 			my $use_class;
-			if (index ($start->{$cmd}, 'PEF::Front::') == 0) {
+			if (index($start->{$cmd}, 'PEF::Front::') == 0) {
 				$full_func = $start->{$cmd};
-				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
+				$use_class = substr($full_func, 0, rindex($full_func, "::"));
 				$sub_int .= "\teval {use $use_class; $full_func(\$response, \$context)};\n";
 			} else {
 				$full_func = cfg_app_namespace . "OutFilter::" . $start->{$cmd};
-				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
+				$use_class = substr($full_func, 0, rindex($full_func, "::"));
 				eval "use $use_class;";
 				croak {
 					result  => 'INTERR',
 					answer  => 'Internal server error',
 					message => $@,
-				  }
-				  if $@;
+					}
+					if $@;
 				$sub_int .= "\teval {$full_func(\$response, \$context)};\n";
 			}
 			$sub_int .= <<MRP;
@@ -658,30 +662,31 @@ sub load_validation_rules {
 	my ($method) = @_;
 	my $mrf = $method;
 	$mrf =~ s/ ([[:lower:]])/\u$1/g;
-	$mrf = ucfirst ($mrf);
+	$mrf = ucfirst($mrf);
 	my $rules_file = cfg_model_dir . "/$mrf.yaml";
-	my @stats      = stat ($rules_file);
+	my @stats      = stat($rules_file);
 	croak {
 		result => 'INTERR',
 		answer => 'Unknown rules file'
 	} if !@stats;
 	my $base_file = cfg_model_dir . "/-base-.yaml";
-	my @bfs       = stat ($base_file);
+	my @bfs       = stat($base_file);
+
 	if (@bfs
-		&& (!exists ($model_cache{'-base-'}) || $model_cache{'-base-'}{modified} != $bfs[9]))
+		&& (!exists($model_cache{'-base-'}) || $model_cache{'-base-'}{modified} != $bfs[9]))
 	{
 		%model_cache = ('-base-' => {modified => $bfs[9]});
 		open my $fi, "<",
-		  $base_file
-		  or croak {
+			$base_file
+			or croak {
 			result      => 'INTERR',
 			answer      => 'cant read base rules file: $1',
 			answer_args => ["$!"],
-		  };
+			};
 		my $raw_rules;
-		read ($fi, $raw_rules, -s $fi);
+		read($fi, $raw_rules, -s $fi);
 		close $fi;
-		my @new_rules = eval { Load $raw_rules};
+		my @new_rules = eval {Load $raw_rules};
 		if ($@) {
 			cluck $@;
 			croak {
@@ -694,24 +699,24 @@ sub load_validation_rules {
 			$model_cache{'-base-'}{rules} = $new_rules;
 		}
 	}
-	if (!exists ($model_cache{$method}) || $model_cache{$method}{modified} != $stats[9]) {
+	if (!exists($model_cache{$method}) || $model_cache{$method}{modified} != $stats[9]) {
 		open my $fi, "<",
-		  $rules_file
-		  or croak {
+			$rules_file
+			or croak {
 			result      => 'INTERR',
 			answer      => 'cant read rules file: $1',
 			answer_args => ["$!"],
-		  };
+			};
 		my $raw_rules;
-		read ($fi, $raw_rules, -s $fi);
+		read($fi, $raw_rules, -s $fi);
 		close $fi;
-		my @new_rules = eval { Load $raw_rules};
+		my @new_rules = eval {Load $raw_rules};
 		croak {
 			result      => 'INTERR',
 			answer      => 'Validator $1 description error: $2',
 			answer_args => [$method, "$@"]
-		  }
-		  if $@;
+			}
+			if $@;
 		my $new_rules = $new_rules[0];
 		$new_rules->{method} = $method;
 		my $validator_sub = _build_validator($new_rules);
@@ -723,8 +728,9 @@ sub load_validation_rules {
 			answer        => 'Validator $1 error: $2',
 			answer_args   => [$method, "$@"],
 			validator_sub => $validator_sub
-		  }
-		  if $@;
+			}
+			if $@;
+
 		for (keys %$new_rules) {
 			$model_cache{$method}{$_} = $new_rules->{$_} if $_ ne 'code';
 		}
@@ -754,18 +760,18 @@ sub load_validation_rules {
 sub validate {
 	my ($request, $context) = @_;
 	my $method = $request->{method}
-	  or croak(
+		or croak(
 		{   result => 'INTERR',
 			answer => 'Unknown method'
 		}
-	  );
+		);
 	load_validation_rules($method);
 	$model_cache{$method}{code}->($request, $context);
 }
 
 sub get_method_attrs {
 	my $request = $_[0];
-	my $method = ref ($request) ? $request->{method} : $request;
+	my $method = ref($request) ? $request->{method} : $request;
 	if (exists $model_cache{$method}{$_[1]}) {
 		return $model_cache{$method}{$_[1]};
 	} else {
