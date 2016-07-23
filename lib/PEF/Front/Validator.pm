@@ -164,7 +164,9 @@ ATTR
 				? length($jsn {$pr})
 				: ref($jsn {$pr}) eq 'HASH'
 				? scalar(keys \%{$jsn {$pr}})
-				: scalar(\@{$jsn {$pr}}) 
+				: ref($jsn {$pr}) eq 'PEF::Front::File'
+				? $jsn {$pr} ->size
+				: scalar(\@{$jsn {$pr}})
 				) >  $mr->{'max-size'};
 ATTR
 		},
@@ -180,7 +182,9 @@ ATTR
 				? length($jsn {$pr})
 				: ref($jsn {$pr}) eq 'HASH'
 				? scalar(keys \%{$jsn {$pr}})
-				: scalar(\@{$jsn {$pr}}) 
+				: ref($jsn {$pr}) eq 'PEF::Front::File'
+				? $jsn {$pr} ->size
+				: scalar(\@{$jsn {$pr}})
 				) <  $mr->{'min-size'};
 ATTR
 		},
