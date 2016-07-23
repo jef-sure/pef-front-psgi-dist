@@ -237,7 +237,17 @@ is possible to automatically load value from session data.
     user_last_name:
       default: session.user_last_name
 
-=back 
+=item from configuration parameter
+
+You can specify any configuration parameter of framework or your application.
+
+  ---
+  params:
+    path:
+      value: config.avatar_images_path
+
+
+=back
 
 =head2 Checks
 
