@@ -1,0 +1,470 @@
+=encoding utf8
+ 
+=head1 PEF::Front model methods description
+
+This is the crucial feature of PEF::Font.
+
+=head1 SYNOPSIS
+
+  /submitUserLogin
+  
+  # model/UserLogin.yaml
+
+  ---
+  params:
+    ip:
+      value: context.ip
+    login:
+      min-size: 1
+      max-size: 40
+    password:
+      min-size: 4
+      max-size: 40
+  model: User::login
+  result:
+    OK:
+      set-cookie:
+        auth:
+          value: TT response.auth
+          expires: TT response.expires
+      redirect: /me
+    DEFAULT:
+      unset-cookie: auth
+
+  /ajaxGetArticles
+  
+  # model/GetArticles.yaml
+  ---
+  params:
+    ip:
+      value: context.ip
+    limit:
+      regex: ^\d+$        
+      max-size: 3
+    offset:
+      regex: ^\d+$
+      max-size: 10
+  model: Article::get_articles
+
+
+ 
+=head1 DESCRIPTION
+
+For every internal API method there's one YAML-file describing its
+parameters, handler method, caching and result processing. 
+
+There're two sources to call these methods from: templates and HTTP requests.
+
+To call this method from template you write it like this:
+
+  [% articles = "get articles".model(offset => articles_offset, limit => 5) %]
+
+To call this method from AJAX you send HTTP request like this:
+
+  GET /ajaxGetArticles?offset=0&limit=5
+
+"Normal" method name is lowercased phrase with spaces. 
+Model methods description file name is made up from
+method name transformed to CamelCase with '.yaml' extension: 
+"get articles" -> "GetArticles.yaml". HTTP request method name is
+made up concatenating one of prefixes '/ajax', '/submit', '/get' and CamelCase
+form of method name.
+
+=head1 INPUT PARAMETERS
+
+Section "params" describes method input parameters, their sources, 
+types and checks. There're two parameter's attribute to set source:
+B<value> and B<default>. B<value> means unconditionally set value;
+B<default> means that value will be set only if it was not set from
+request query or form data parameter. 
+
+Framework automatically decodes input data into internal Perl UTF-8 and
+automatically encodes output to UTF-8. This is the only supported encoding.
+
+=head2 Possible sources
+
+=over
+
+=item from query string or form data
+
+This is the default. There's no difference between parameters from query 
+string and form data. But when the same parameter is in query and form data
+then value from query has precedence. 
+
+There's also special parameter B<json> that has to be encoded JSON value.
+When it's present, then parameters are overwritten from this decoded JSON.
+
+Request parsing detects JSON or XML content-types and can parse them.
+
+=item Direct value
+
+B<value> and B<default> can be string or integer.
+
+  ---
+  params:
+    ip:
+      default: 127.0.0.1
+    is_active:
+      default: 0
+
+=item from context data
+
+B<context> is a hash with some data for handlers. 
+It is created after initial routing processing before template or 
+API method processing. There're some data:
+
+=over
+
+=item B<ip>
+
+IP address of the client.
+
+=item B<lang>
+
+Short (ISO 639-1) language code. 
+There's automatic language detection based on URL, HTTP headers and cookies
+and Geo IP. You can turn it off. It's written to 'lang' cookie.
+
+=item B<hostname>
+
+Hostname of current request.
+
+=item B<path>
+
+Current URI path.
+
+=item B<path_info>
+
+Initial URI path.
+
+=item B<method>
+
+Method name.
+
+=item B<scheme>
+
+URL scheme. One of: 'http', 'https'.
+
+=item B<src>
+
+"Source" of the request. One of: 'app', 'ajax', 'submit', 'get'.
+
+=item B<form>, B<headers>, B<cookies>, B<session> and B<request> 
+
+They are also parts of context but they can't be used as values by themselves.
+They are used in handlers. 
+
+C<session> is loaded only if it was used for parameter value. 
+
+=item B<template>
+
+For template processing "method" is replaced with "template" 
+which is template name.
+
+=item B<time>, B<gmtime>, B<localtime>
+
+These are additional fields for template processing. 
+C<time> is current UNIX-time, C<gmtime> - 9-element list with the time in GMT,
+C<localtime> - 9-element list with the time for the local time zone. 
+See C<perldoc -f> for these functions. 
+
+=back 
+
+Example:
+
+  ---
+  params:
+    ip:
+      value: context.ip
+    lang:
+      default: context.lang
+
+=item from request parameters
+
+By default parameter "param1" is set from "param1" query/form data,
+but it's possible to set it from another request parameter, 
+like "another_param". B<form> is meant for this.
+
+  ---
+  params:
+    ip:
+      value: context.ip
+    lang:
+      default: context.lang
+    login:
+      value: form.username
+
+=item from headers
+
+  ---
+  params:
+    ip:
+      value: context.ip
+    back_url:
+      default: headers.referer
+
+=item from cookies
+
+  ---
+  params:
+    ip:
+      value: context.ip
+    auth:
+      default: cookies.auth
+
+=item from request notes
+
+Routing subroutines can set some notes on request object. Notes are just any
+key-value pairs.
+
+  ---
+  params:
+    ip:
+      value: context.ip
+    subsection:
+      default: notes.subsection
+
+
+=item from session data
+
+From request parameters or from cookies using B<cfg_session_request_field> 
+is possible to automatically load value from session data.
+
+  ---
+  params:
+    ip:
+      value: context.ip
+    user_last_name:
+      default: session.user_last_name
+
+=back 
+
+=head2 Checks
+
+Ther're several types of input data checks. 
+
+=over
+
+=item Perl regular expressions
+
+This is the mostly used method. L<Regexp::Common> with option 'RE_ALL'
+is already loaded. When you write an expressions as parameter value 
+then it means regexp check. 
+
+  ---
+  params:
+    positive_integer: ^\d+$
+    integer_or_empty: ^\d+$|^$
+    any_integer: ^$RE{num}{int}$
+    money: ^$RE{num}{decimal}{-places=>"0,2"}$
+
+When you need to add some other attribute then attribute 'regex' is used:
+
+  ---
+  params:
+    lang:
+      default: context.lang
+      regex: ^[a-z]{2}$
+
+=item Possible values
+
+Atributes C<can>, C<can_string> and C<can_number> describes set of possible 
+values. C<can> and C<can_string> are synonyms.
+
+  ---
+  params:
+    bool:
+      can_number: [0, 1]
+      default: 0
+    lang:
+      can: [en, de]
+      default: de
+
+=item Type
+
+Parameter can have type 'array', 'hash' or 'file'. You can specify this with
+last symbol of the parameter name '@', '%' or '*' or with attribute 'type'
+as 'array', 'hash' or 'file'. To submit array you can use PHP-syntax:
+
+  <!-- HTML -->
+  <select name="select[]" multiple="multiple">
+  
+  # YAML
+  ---
+  params:
+    select@:
+
+Another way to submit array or hash is to use C<json> form data field or 
+to post JSON or XML content.
+
+Array of files has type 'array'.
+
+=item Maximum or minimum size
+
+This checks are working according to parameter type: 
+
+=over
+
+=item string length for scalars
+
+=item array size for arrays
+
+=item file size for files
+
+=back
+
+Min/max values are included in allowed range.
+
+  ---
+  params:
+    limit40str:
+      max-size: 40
+    limit4_40str:
+      min-size: 4
+      max-size: 40
+
+=item Maximum or minimum value
+
+Numerical checks. Min/max values are included in allowed range.
+
+  ---
+  params:
+    speed:
+      max: 140
+      min: 20
+
+=item captcha
+
+Captcha validation process usually removes information from captcha database
+and this check can be done only once. Validation process makes all needed 
+checks. 
+
+This works following way. One parameter contains entered captcha 
+code and another parameter contains hashed data of the right captcha code.
+Attribute C<captcha> specifies parameter with hashed data of the right captcha 
+code. Validator checks whether the code is right. If entered captcha is
+equal to 'B<nocheck>' then it means to validator 'no need to check captcha' and 
+no check is done. If captcha is required then handler must check that entered
+captcha code is not equal to 'B<nocheck>'.
+
+=item optional flag
+
+This attribute means whether parameter is optional. special value 'empty' means 
+parameter is optional even when passed but contains only empty string.
+
+=item custom filter
+
+Filter can be a Perl subroutine, regular expression substitution or array
+of regular expression substitutions.
+
+  ---
+  params:
+    auth:
+      default: cookies.auth
+      max-size: 40
+      filter: Auth::required
+    comment:
+      max-size: 1000
+      filter: [ s/</&lt;/g, s/>/&gt;/g ]
+
+Recognized substitution operators are: C<s>, C<tr> and C<y>.
+
+C<Auth::required> actually means C<subroutine required($value, $context)>
+from your module C<${YourApplicationNamespace}::InFilter::Auth>.
+
+I.e.:
+
+    + $project_dir/
+      + $app/
+        + $Project/
+          - AppFrontConfig.pm
+          + InFilter/
+            - Auth.pm
+
+Your subroutine recieves 2 arguments: value of the parameter and request 
+context.
+
+  package MyApp::InFilter::Auth;
+  use DBIx::Struct;
+  use MyApp::Common;
+
+  sub required {
+    my ($value, $context) = @_;
+    my $author = get_author_from_auth($value);
+    die {
+      result => "NEED_LOGIN",
+      answer => 'You have to login for this operation'
+    } unless $author;
+    $value;
+  }
+
+When filter dies for optional parameter then this parameter is deleted from
+request as if it was not provided. For required fields this means failed 
+validation. 
+
+=item kind of inheritance
+
+There's special YAML-file B<-base-.yaml> in your B<cfg_model_dir> where you
+can write all common for requests parameters and just use this descriptions
+in your model methods description files.
+
+  -base-.yaml
+  ---
+  params:
+    ip:
+      value: context.ip
+    auth:
+      default: cookies.auth
+      max-size: 40
+    auth_required:
+      base: auth
+      filter: Auth::required
+    limit:
+      regex: ^\d+$        
+      max-size: 3
+    offset:
+      regex: ^\d+$
+      max-size: 10
+    positive_integer: ^\d+$
+    integer_or_empty: ^\d+$|^$
+    any_integer: ^$RE{num}{int}$
+    bool:
+      can_number: [0, 1]
+      default: 0
+    money: ^$RE{num}{decimal}{-places=>"0,2"}$
+
+Attribute C<base> allows to specify "inheritance" of the properties for
+corresponding parameter from B<-base-.yaml>. 
+It works even inside B<-base-.yaml>. When you write an expressions 
+with leading C<$> as parameter value then it means "inheritance".
+
+  ---
+  params:
+    ip: $ip
+    auth: 
+      base: $auth
+      optional: true
+    id_article: $positive_integer
+    id_comment_parent:
+      base: $integer_or_empty
+      filter: Empty::to_undef
+    author:
+      base: $limit40str
+      min-size: 1
+      filter: Default::auth_to_author
+
+=back
+
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
