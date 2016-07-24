@@ -357,12 +357,13 @@ equal to 'B<nocheck>' then it means to validator 'no need to check captcha' and
 no check is done. If captcha is required then handler must check that entered
 captcha code is not equal to 'B<nocheck>'.
 
-=item optional flag
+=item Optional flag
 
-This attribute means whether parameter is optional. special value 'empty' means 
-parameter is optional even when passed but contains only empty string.
+Attribute C<optional> specifies whether parameter is optional.  
+Special value 'empty' means parameter is optional even when passed but 
+contains only empty string.
 
-=item custom filter
+=item Custom filter
 
 Filter can be a Perl subroutine, regular expression substitution or array
 of regular expression substitutions.
@@ -412,10 +413,10 @@ When filter dies for optional parameter then this parameter is deleted from
 request as if it was not provided. For required fields this means failed 
 validation. 
 
-=item kind of inheritance
+=item Kind of inheritance
 
 There's special YAML-file B<-base-.yaml> in your B<cfg_model_dir> where you
-can write all common for requests parameters and just use this descriptions
+can write all common requests parameters and just use these descriptions
 in your model methods description files.
 
   -base-.yaml
@@ -464,6 +465,99 @@ with leading C<$> as parameter value then it means "inheritance".
       filter: Default::auth_to_author
 
 =back
+
+=head2 Extra parameters
+
+Special key C<extra_params> controls what to do when there're more
+parameters as required: B<ignore> - all extra parameters will be 
+silently deleted; B<pass> - all extra parameters will be passed 
+without validation; B<disallow> - validation fails when extra parameters
+passed.
+
+  ---
+  params:
+    ip: $ip
+  extra_params: pass
+
+=head2 Output result
+
+Handlers are supposed to return hash like these.
+
+  {
+    result => "OK",
+  } 
+
+or
+
+  {
+    result => "SOMEERRCODE",
+    answer => 'Some $1 Error $2 Message $3',
+    answer_args => [$some, $error, $params],
+  }
+
+C<result> is required in every answer, other keys are optional.
+
+Following keys have some meaning:
+
+=over
+
+=item B<result>
+
+Is symbolic result state. 
+
+=over
+
+=item "OK" means everything is good
+
+=item "INTERR" means some internal application error
+
+=item "OAUTHERR" means Oauth protocol error
+
+=item "BADPARAM" means validation error
+
+=back
+
+Application can use its own codes.
+
+=item B<answer>
+
+Message from application.
+
+=item B<answer_args>
+
+Array of arguments to the message.
+
+=item B<answer_headers>
+
+Array of key-value pairs that will be set as output HTTP headers and their 
+values. Key-value pairs can be list ($header => $value), 
+array [$header => $value] or hash {$header => $value}.
+
+=item B<answer_cookies>
+
+Array of key-value pairs that will be set as output HTTP cookies and their 
+values. Key-value pairs can be list ($cookie => $value), 
+array [$cookie => $value] or hash {$cookie => $value}.
+
+=item B<answer_no_nls>
+
+If present and true then C<answer> will be send as is, without localization 
+attempt.
+
+=item B<answer_status>
+
+Sets HTTP status code. If C<answer_status> is between 300 and 400 then 
+C<Location> headers specifys new location for redirect.
+
+=item B<answer_content_type>
+
+Sets Content-Type header.
+
+=back
+
+When method is called like C</ajax> then it means JSON format answer. 
+When you need another output format, use C</get> or C</submit> type calls.
+
 
 
 =head1 AUTHOR
