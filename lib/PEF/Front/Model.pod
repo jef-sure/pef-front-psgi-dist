@@ -380,7 +380,7 @@ of regular expression substitutions.
 
 Recognized substitution operators are: C<s>, C<tr> and C<y>.
 
-C<Auth::required> actually means C<subroutine required($value, $context)>
+C<Auth::required> actually means subroutine C<required($value, $context)>
 from your module C<${YourApplicationNamespace}::InFilter::Auth>.
 
 I.e.:
@@ -558,7 +558,150 @@ Sets Content-Type header.
 When method is called like C</ajax> then it means JSON format answer. 
 When you need another output format, use C</get> or C</submit> type calls.
 
+=head2 Response caching
 
+Some methods can return constant or rarely changing data, 
+it makes perfect sense to cache them.
+Key C<cache> manages caching for responses. It has to attributes:
+C<key> - one value or array defining caching key; 
+C<expires> - how long data can be retained in cache. 
+This value is parsed by L<Time::Duration::Parse>.
+
+  ---
+  params:
+    id_user: $positive_integer
+  cache:
+    key: [method, id_user]
+    expires: 1m
+
+=head2 Result processing
+
+Response key C<result> defines C<result>'s section to execute some actions. 
+When no section is found then it looks for C<DEFAULT> section. 
+Following actions are supported:
+
+=over
+
+=item B<redirect> 
+
+Temporary browser redirect (302) for C</get> or C</submit> request types.
+
+=item B<set-cookie> - set cookie. 
+
+Possible attributes: C<value>, C<expires>, C<domain>, C<path>, C<secure>, 
+C<max-age>, C<httponly>.
+
+C<secure> attribute can be calculated automatically from request's scheme 
+when setting or unsetting cookie if not explicitly set in attributes.
+
+=item B<unset-cookie>
+
+Unsets cookie. It can be one cookie name, list of cookies or hash of cookies 
+with their attributes as for C<set-cookie>.
+
+=item B<filter>
+
+Specifies output filter.
+
+=item B<answer>
+
+Sets answer content.
+
+=item B<set-header>
+
+Sets response header. This action ensures that there's only one header 
+with given name in response.
+
+=item B<add-header>
+
+Adds response header. This action allows to have multiple headers 
+with the same name.
+
+=back
+
+  ---
+  params:
+    back_url:
+      default: headers.referer
+  result:
+    OK:
+      set-cookie:
+        auth:
+          value: TT response.auth
+          expires: TT response.expires
+      redirect: /me
+    DEFAULT:
+      unset-cookie: auth
+      redirect: TT request.back_url
+
+Prefix C<TT> means "process this expression with Template-Toolkit language".
+This prefix can be used for any attribute value in C<result> section. 
+
+Stash for this processing contains following data fields: 
+C<response>, C<form>, C<cookies>, C<context>, C<request>, C<result>.
+
+There're two additional helper functions: C<uri_unescape($uri)> 
+and C<session($key)>. $key is optional. 
+
+=head2 Output filter
+
+It's possible to specify filtering function for sending content. 
+Attribute C<filter> for given C<result code> in C<result> section 
+specifies function that accepts two parameters: ($response, $context).
+
+  ---
+  result:
+    OK:
+      filter: Export::toXML
+
+
+C<Export::toXML> actually means subroutine C<toXML($response, $context)>
+from your module C<${YourApplicationNamespace}::OutFilter::Export>.
+
+$response must be modified "in-place", return value of subroutine is ignored.
+
+Intended application is to transform response to external form, 
+like XML, CSV, XLS and so on.
+
+=head2 Model handler
+
+Key C<model> sets calling model handler. 
+Model can be "local" or "remote". "Local" means that handler is right 
+inside loaded application. "Remote" can mean everything, like 
+"call database method". "Remote" model is handled by 
+C<cfg_model_rpc($model_handler)>. "Local" is located in some module inside
+C<${YourApplicationNamespace}::Local::*>.
+
+  ---
+  params:
+    ip: $ip
+    login:
+      base: limit40str
+      min-size: 1
+    password: $limit4_40str
+  model: Author::login
+
+#  $project_dir/$app/$Project/Local/Author.pm
+
+  package MyApp::Local::Author;
+  sub login {
+    my ($req, $context) = @_;
+    my $author = one_row(author => {hash_ref_slice $req, qw(login password)})
+      or return {result => "PASS"};
+    my $auth = PEF::Front::Session::_secure_value;
+    new_row( 'author_auth',
+      id_author => $author->id_author,
+      auth      => $auth,
+      expires   => [\"now() + ?::interval", $expires]
+    );
+    return { 
+      result  => "OK",
+      expires => $expires,
+      auth    => $auth
+    };
+  }
+
+Model handler that matches /^\w+::/ is "local" otherwise is "remote".
 
 =head1 AUTHOR
  
