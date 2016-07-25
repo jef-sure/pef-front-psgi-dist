@@ -317,6 +317,16 @@ Default is 'anonymous_secret'.
 Returns scopes for given $service. Default is quite sensible 
 for all supported services to obtain user info.
 
+=item B<cfg_parse_extra_params($src, $params, $form)>
+
+Parses extra parameters from request's path.
+
+By default if C<$src> is on of 'app', 'get' then it splits path by '/'
+and tries to split every part into pair divided by '-'. Left part is
+parameter name and right part is value. If it was not possible to split
+by '-' then first parameter is named C<cookie> and rest is C<get_param_$i>
+with increasing from 1 C<$i>.
+
 =item B<cfg_template_dir($request, $lang)>
 
 Returns one or more directories with templates.
