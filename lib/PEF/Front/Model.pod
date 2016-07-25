@@ -794,19 +794,30 @@ SendMessage.yaml:
 Your MyApp::Local::Article::add_comment subroutine must check that 
 C<captcha_code> is not equal to 'nocheck' if captcha is required. 
 For example, if user is already logged in then it makes little sense to 
-enter captcha..
+enter captcha.
 
 Capthcha image is made by 
 C<PEF::Front::Captcha::make_captcha($request, $context)> function. 
 This function writes generated images in B<cfg_www_static_captchas_dir>,
 stores some information in its own database in B<cfg_captcha_db> and
 returns generated md5 sum. When form is submitted, 
-C<PEF::Front::Validator> checks the entered code and when it is right, 
+validator checks the entered code and when it is right, 
 passes to the model method B<"send message">. Captcha code checks are 
 destructive: the code is not valid anymore after successful check.
 
 To change generation image class see B<cfg_captcha_image_class> in 
 L<PEF::Front::Config>.
+
+=head2 File upload
+
+Uploaded files are stored in some subdirectory in B<cfg_upload_dir>.
+Corresponding parameter value is object of L<PEF::Front::File>. 
+This parameter can have attribute type 'file' to pass validation.
+Array of files can have attribute 'array'. 
+
+Uploaded file should be copied to some permanent storage. Usually you
+can just C<link> it to new place. Uploaded files will be deleted
+after request destruction. 
 
 =head1 AUTHOR
  
