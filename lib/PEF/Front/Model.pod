@@ -585,6 +585,7 @@ Following actions are supported:
 =item B<redirect> 
 
 Temporary browser redirect (302) for C</get> or C</submit> request types.
+Can be array or values - it finds first non-empty.
 
 =item B<set-cookie> - set cookie. 
 
@@ -598,6 +599,13 @@ when setting or unsetting cookie if not explicitly set in attributes.
 
 Unsets cookie. It can be one cookie name, list of cookies or hash of cookies 
 with their attributes as for C<set-cookie>.
+
+Cookie with attributes can be required when cookie was set with some
+attributes like C<domain>, C<path>, C<secure>. 
+In this case you have to nail the right cookie.
+
+Usually you don't need to set any attributes and then unset will work 
+automatically.
 
 =item B<filter>
 
@@ -702,6 +710,103 @@ C<${YourApplicationNamespace}::Local::*>.
   }
 
 Model handler that matches /^\w+::/ is "local" otherwise is "remote".
+
+=head2 Method call types
+
+Model method can be called from AJAX or template. 
+URI path prefix (C<src> in B<context>) defines how method was called 
+and what type of result is expected.
+
+=over
+
+=item B</ajax>
+
+Answer will be in JSON format and redirects from C<result> section are ignored.
+
+=item B</submit>
+
+Answer can be in any format and usually redirects to new location.
+
+=item B</get>
+
+Works like B</submit> but by default parses rest of the path to parameters.
+See B<cfg_parse_extra_params($src, $params, $form)> in L<PEF::Front::Config>.
+
+=back
+
+Method that is called from templates has C<src> equal to 'app'.
+
+Key C<allowed_source> can restrict call types: C<template> - for templates;
+C<submit> - for C</submit> or C</get>; C<ajax> for C</ajax>. Really useful
+distinction is when some method are allowed to be called only from templates.
+
+When this key is absent then there's no restrictions.
+
+=head2 Captcha
+
+It's supposed to be used like this. You make method making captcha images:
+
+Captcha.yaml:
+
+  ---
+  params:
+    width:
+        default: 35
+    height:
+        default: 40
+    size:
+        default: 5
+  extra_params: ignore
+  model: PEF::Front::Captcha::make_captcha
+
+You use it in some template like this: 
+
+  <form method="post" action="/submitSendMessage">
+  Captcha:
+  [% captcha="captcha".model %]
+  <input type="hidden" name="captcha_hash" value="[% captcha.code %]">
+  <img src="[% config('www_static_captchas_path') %][% captcha.code %].jpg">
+  <input type="text" maxlength="5" name="captcha_code">
+   ...
+  </form>
+
+
+SendMessage.yaml:
+
+  ---
+  params:
+    ip: $ip
+    email: $email
+    lang: $lang
+    captcha_code:
+        min-size: 5
+        captcha: captcha_hash
+    captcha_hash:
+        min-size: 5
+    subject: $subject
+    message: $message
+  result:
+    OK:
+        redirect: /appSentIsOk
+  model: Article::add_comment
+  allowed_source: [ajax, submit]
+
+Your MyApp::Local::Article::add_comment subroutine must check that 
+C<captcha_code> is not equal to 'nocheck' if captcha is required. 
+For example, if user is already logged in then it makes little sense to 
+enter captcha..
+
+Capthcha image is made by 
+C<PEF::Front::Captcha::make_captcha($request, $context)> function. 
+This function writes generated images in B<cfg_www_static_captchas_dir>,
+stores some information in its own database in B<cfg_captcha_db> and
+returns generated md5 sum. When form is submitted, 
+C<PEF::Front::Validator> checks the entered code and when it is right, 
+passes to the model method B<"send message">. Captcha code checks are 
+destructive: the code is not valid anymore after successful check.
+
+To change generation image class see B<cfg_captcha_image_class> in 
+L<PEF::Front::Config>.
 
 =head1 AUTHOR
  
