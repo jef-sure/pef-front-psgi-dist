@@ -199,7 +199,6 @@ sub rewrite_route {
 sub prepare_context {
 	my $request = $_[0];
 	my $form    = $request->params;
-	my $cookies = $request->cookies;
 	my $lang;
 	my ($src, $method, $params);
 	if (cfg_url_contains_lang) {
@@ -218,22 +217,7 @@ sub prepare_context {
 		}
 		$lang = PEF::Front::NLS::guess_lang($request);
 	}
-	if (($src eq 'get' || $src eq 'app') && $params ne '') {
-		my @params = split /\//, $params;
-		my $i = 1;
-		for my $pv (@params) {
-			my ($p, $v) = split /-/, $pv, 2;
-			if (!defined($v)) {
-				$v = $p;
-				$p = 'cookie';
-				if (exists $form->{$p}) {
-					$p = "get_param_$i";
-					++$i;
-				}
-			}
-			$form->{$p} = $v;
-		}
-	}
+	cfg_parse_extra_params($src, $params, $form);
 	return PEF::Front::Response->new(request => $request, status => 404) if $method =~ /[\/.\\]/;
 	$method =~ s/[[:upper:]]\K([[:upper:]])/ \l$1/g;
 	$method =~ s/[[:lower:]]\K([[:upper:]])/ \l$1/g;
@@ -247,7 +231,7 @@ sub prepare_context {
 		form      => $form,
 		headers   => $request->headers,
 		scheme    => $request->scheme,
-		cookies   => $cookies,
+		cookies   => $request->cookies,
 		method    => $method,
 		src       => $src,
 		request   => $request,
@@ -342,3 +326,4 @@ sub to_app {
 }
 
 1;
+

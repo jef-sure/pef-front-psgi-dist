@@ -77,6 +77,7 @@ my @std_var_params = qw{
 	cfg_oauth_client_secret
 	cfg_oauth_scopes
 	cfg_logger
+	cfg_parse_extra_params
 };
 
 our %config_export;
@@ -271,6 +272,28 @@ sub std_logger {
 	$request->{env}{'psgix.logger'}
 		|| sub {$request->{env}{'psgi.errors'}->print($_[0]->{message});}
 }
+
+sub std_parse_extra_params {
+	my ($src, $params, $form) = @_;
+
+	if (($src eq 'get' || $src eq 'app') && $params ne '') {
+		my @params = split /\//, $params;
+		my $i = 1;
+		for my $pv (@params) {
+			my ($p, $v) = split /-/, $pv, 2;
+			if (!defined($v)) {
+				$v = $p;
+				$p = 'cookie';
+				if (exists $form->{$p}) {
+					$p = "get_param_$i";
+					++$i;
+				}
+			}
+			$form->{$p} = $v;
+		}
+	}
+}
+
 
 sub cfg {
 	my $key     = $_[0];
