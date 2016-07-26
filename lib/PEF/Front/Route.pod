@@ -57,7 +57,8 @@ Routing is always given by pairs: C<rule> => C<destination>.
 Destination can be simple value or 2 or 3-elements array with value, flags 
 and L<PEF::Front::Response> object.
 
-C<flags> can be string like "L=404" or hash like {L => 404}.
+C<flags> can be string like "L=404" or hash like {L => 404}. 
+In string form flags are separated by space or comma.
 
   PEF::Front::Route::add_route(
     '/'        => '/appIndex',
@@ -71,8 +72,9 @@ Following flags are recognized:
 
 =item B<R>
 
-By default it's temporary redirect but parameter can change it, 
-for example C<R=301> means permanent redirect.
+By default it's temporary redirect but status parameter can change it, 
+for example C<R=301> means permanent redirect. This flag automatically
+means 'Last destination'.
 
 =item B<L>
 
@@ -135,8 +137,36 @@ content found then response with 404 status is returned.
 
 Using B<CODE> => B<undef> you can implement any URL mapping that you wish.
 
+  # quasi-RESTful
+
+  sub my_routing {
+    my $path = $_[0]->path;
+    my ($resource, $id) = $path =~ m{^/([^/]+)/?([^/]+)?};
+    my $action = ucfirst lc $_[0]->method;
+    $_[0]->param(id => $id) if defined $id;
+    return ["/ajax$action$resource", "L"];
+  }
+  
+  PEF::Front::Route::add_route(\&my_routing => undef);
+
 During routing process you can change request parameters and put some notes to
 it. See C<note($key [, $value])> in L<PEF::Front::Request>.
+
+This module exports these functions: C<get post patch put delete trace websocket sse>
+to help with HTTP method filtering.
+
+  PEF::Front::Route::add_route(
+    get  '/' => '/appIndex',
+    post '/' => '/ajaxLogin',
+  );
+
+=head1 APPLICATION ENTRY POINT
+
+You startup file must return reference to subroutine that accept incoming 
+request. C<PEF::Front::Route->to_app()> is this reference. Your last
+line in startup file usually should be
+
+  PEF::Front::Route->to_app(); 
 
 =head1 AUTHOR
  
