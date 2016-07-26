@@ -3,7 +3,6 @@ use warnings;
 use strict;
 use FindBin;
 use File::Basename;
-use PEF::Front::RPC;
 use feature 'state';
 our $project_dir;
 our $app_conf_dir;
@@ -43,10 +42,6 @@ my @std_const_params = qw{
 	cfg_db_password
 	cfg_db_name
 	cfg_db_reconnect_trys
-	cfg_model_rpc_admin_port
-	cfg_model_rpc_site_port
-	cfg_model_rpc_admin_addr
-	cfg_model_rpc_site_addr
 	cfg_model_local_dir
 	cfg_project_dir
 	cfg_app_namespace
@@ -126,10 +121,6 @@ sub std_project_dir                  {$project_dir}
 sub std_no_nls                       {0}
 sub std_unknown_msgid_db             {cfg_project_dir() . "/var/cache/unknown-msgid.db"}
 sub std_collect_unknown_msgid        {0}
-sub std_model_rpc_admin_port         {5500}
-sub std_model_rpc_site_port          {4500}
-sub std_model_rpc_admin_addr         {'172.16.0.1'}
-sub std_model_rpc_site_addr          {'172.16.0.1'}
 sub std_template_cache               {cfg_project_dir() . "/var/tt_cache"}
 sub std_location_error               {"/appError?msgid=Internal\%20Error"}
 sub std_db_reconnect_trys            {30}
@@ -191,17 +182,7 @@ sub std_template_dir {
 }
 
 sub std_model_rpc {
-	if ($_[0] eq 'admin' || $_[0] eq 'rpc_admin') {
-		return PEF::Front::RPC->new(
-			'Addr' => cfg_model_rpc_admin_addr(),
-			'Port' => cfg_model_rpc_admin_port(),
-		);
-	} else {
-		return PEF::Front::RPC->new(
-			'Addr' => cfg_model_rpc_site_addr(),
-			'Port' => cfg_model_rpc_site_port(),
-		);
-	}
+	my $model = $_[0];
 }
 
 sub std_oauth_client_id {
