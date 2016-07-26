@@ -1,0 +1,194 @@
+=head1 NAME
+
+B<PEF::Front::RenderTT> - Template processing
+
+=head1 DESCRIPTION
+
+Template engine is implemented by L<Template::Alloy> module using 
+Template::Toolkit style. You can use all functions that provided by
+L<Template::Alloy> module plus a few more.
+ 
+=head1 SETTINGS
+
+L<Template::Alloy> module setup using "V2EQUALS => 0", this means 
+that for string comparison you have to use "eq" operator and "==" for
+numerical.
+
+=head1 PATH
+
+Templates are located in B<cfg_template_dir($request, $lang)> 
+(See L<PEF::Front::Config>), they are called like $template.html 
+and are accessible by path /app$Template.  Its file name is a 
+lower-case converted from CamelCase form with suffix C<.html>. 
+Like: C</appIndex> -> C<index.html>, 
+C</appUserSettings> -> C<user_settings.html>.
+
+This C</app$Template>  path is created automatically when you 
+put your template in template directory.
+
+=head1 CONTEXT
+
+During template processing following context variables are pre-defined:
+
+=over
+
+=item B<ip>
+
+IP address of the client.
+
+=item B<lang>
+
+Short (ISO 639-1) language code. 
+There's automatic language detection based on URL, HTTP headers and cookies
+and Geo IP. You can turn it off. It's written to 'lang' cookie.
+
+=item B<hostname>
+
+Hostname of current request.
+
+=item B<path>
+
+Current URI path.
+
+=item B<path_info>
+
+Initial URI path.
+
+=item B<template>
+
+Template name.
+
+=item B<scheme>
+
+URL scheme. One of: 'http', 'https'.
+
+=item B<src>
+
+Is equal to 'app'.
+
+=item B<form>, B<headers>, B<cookies>
+
+These are corresponding hashes. B<form> contains parameters from
+query string, form data and extra parameters from URI path.
+
+=item B<session> and B<request> 
+
+They are objects and can be used from handlers or from template.
+
+C<session> is loaded only if it was used for parameter value. 
+
+=item B<time>, B<gmtime>, B<localtime>
+
+These are additional fields for template processing. 
+C<time> is current UNIX-time, C<gmtime> - 9-element list with the time in GMT,
+C<localtime> - 9-element list with the time for the local time zone. 
+See C<perldoc -f> for these functions. 
+
+=back 
+
+=head1 ADDED FUNCTIONS
+
+There're some additional functions defined. 
+
+=head2 model()
+
+It can be used as virtual method for string or hash:
+
+  [% news = "get all news".model(limit => 3) %]
+
+or
+
+  [% news = {method => "get all news", limit => 3}.model %]
+
+This method calls internal model handler to get some data. 
+Source B<template> must be allowed.
+
+=head2 config($key)
+
+Returns config's parameter value.
+
+  [% config('www_static_captchas_path') %]
+
+=head2 uri_unescape($uri)
+
+Returns a string with each %XX sequence replaced with the actual byte (octet).
+
+=head2 strftime($fmt, 9-elements array)
+
+Convert date and time information to string. Returns the string.
+
+See C<strftime> in L<POSIX>.
+
+=head2 gmtime($time), localtime($time)
+
+Return 9-elements array. See corresponding perl functions.
+
+=head2 response_content_type($ct)
+
+Sets response Content-Type header.
+
+=head2 request_get_header($h)
+
+Returns request header
+
+=head2 response_set_header($h => $v)
+
+Sets response header.
+
+=head2 response_set_cookie($c => $v)
+
+Sets response cookie.
+
+=head2 response_set_status($code)
+
+Sets response status code.
+
+=head2 session($key)
+
+Returns session data.
+
+=head2 Localization
+
+=head3 m($msgid, @args)
+
+Returns localized text for message $msgid. It supports parameterized
+messages like:
+
+  [% m('Hello $1', user.name) %]
+
+C<$1> means first argument, C<$2> means second, etc.
+
+=head3 mn($msgid, $num, @args)
+
+This works like C<m($msgid, @args)> but supports singular/plural forms. 
+C<$num> is used to select right form.
+
+  [% mn('You just deleted $1 unimportant files', number, number) %]
+
+In this example first C<number> selects singular/plural form and second
+C<number> is argument.
+
+=head3 ml($msgid, $lang, @args)
+
+This is like C<m($msgid, @args)> but language is selectable.
+
+=head3 mnl($msgid, $num, $lang, @args)
+
+This is like C<mn($msgid, $num, @args)> but language is selectable.
+
+Even if you use only one language it has some sense to use localization:
+it can help you to translate from "programmers" language to "usual user"
+language.
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

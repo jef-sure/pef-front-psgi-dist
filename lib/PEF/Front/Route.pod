@@ -1,6 +1,6 @@
 =head1 NAME
 
-B<PEF::Front::Route> - Routing incoming requests
+B<PEF::Front::Route> - Routing of incoming requests
 
 =head1 DESCRIPTION
 
@@ -62,7 +62,7 @@ In string form flags are separated by space or comma.
 
   PEF::Front::Route::add_route(
     '/'        => '/appIndex',
-    '/me'      => ['/appUser', 'R'],
+    '/me'      => ['/appUser', 'L'],
     '/oldpath' => ['/', 'R=301'],
   );
 
