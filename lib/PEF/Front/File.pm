@@ -87,9 +87,88 @@ sub DESTROY {
 	unlink "$self->{upload_path}/$self->{filename}";
 	my $dir;
 	opendir $dir, $self->{upload_path} and do {
-		my @rest = grep { $_ ne '.' and $_ ne '..' } readdir $dir;
+		my @rest = grep {$_ ne '.' and $_ ne '..'} readdir $dir;
 		rmdir $self->{upload_path} if !@rest;
 	};
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+B<PEF::Front::File> - File class for uploaded files
+
+=head1 DESCRIPTION
+
+This class is used to handle uploaded files.
+
+=head1 FUNCTIONS
+
+=head2 new(%args)
+
+This is constructor. Following arguments are supported:
+
+=over
+
+=item filename
+
+Name of file.
+
+=item content_type
+
+Content-Type from HTTP headers.
+
+=item size
+
+Content-Length from HTTP headers.
+
+=back
+
+It creates file in some subdirectory in B<cfg_upload_dir>.
+
+=head2 content_type
+
+Returns Content-Type.
+
+=head2 size
+
+Returns size of file. It returns actual size when upload is finished.
+
+=head2 fh
+
+Returns file handle.
+
+=head2 filename
+
+Returns filename.
+
+=head2 finish
+
+This function is called when upload is finished.
+
+=head2 upload_path
+
+Returns subdirectory where file is located.
+
+=head2 value
+
+Reads the whole file in variable and returns it.
+
+=head2 append
+
+Appends file content.
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
