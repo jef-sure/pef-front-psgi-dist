@@ -142,6 +142,7 @@ Using B<CODE> => B<undef> you can implement any URL mapping that you wish.
   sub my_routing {
     my $path = $_[0]->path;
     my ($resource, $id) = $path =~ m{^/([^/]+)/?([^/]+)?};
+    $resource = ucfirst $resource;
     my $action = ucfirst lc $_[0]->method;
     $_[0]->param(id => $id) if defined $id;
     return ["/ajax$action$resource", "L"];
