@@ -197,3 +197,159 @@ sub new {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+ 
+PEF::Front::Oauth - This is an implementation of OAuth2 API 
+for several popular services.
+
+=head1 SYNOPSIS
+
+  package MyApp::Local::Oauth;
+  use PEF::Front::Config;
+  use PEF::Front::Oauth;
+  use PEF::Front::Session;
+  use strict;
+  use warnings;
+
+  sub make_url {
+    my ($req, $context) = @_;
+    my $session = PEF::Front::Session->new($req);
+    my $oauth   = PEF::Front::Oauth->new($req->{service}, $session);
+    my $expires = demo_login_expires();
+    $session->data->{oauth_return_url} = $context->{headers}->get_header('Referer') || '/';
+    return {
+        result  => "OK",
+        url     => $oauth->authorization_server($oauth->user_info_scope),
+        auth    => $session->key,
+        expires => $expires,
+        service => $req->{service},
+    };
+  }
+
+  sub callback {
+    my ($req, $context) = @_;
+    my $session = PEF::Front::Session->new($req);
+    my $back_url = $session->data->{oauth_return_url} || '/';
+    delete $session->data->{oauth_return_url};
+    unless ($req->{state} && $req->{code}) {
+        delete $session->data->{oauth_state};
+        return {
+            result => "OAUTHERR",
+            answer => $req->{error_description}
+        };
+    }
+    my $service = $session->data->{oauth_state}{$req->{state}};
+    return {
+        result => "OAUTHERR",
+        answer => 'Unknoen oauth state'
+    } unless $service;
+    my $oauth = PEF::Front::Oauth->new($service, $session);
+    $oauth->exchange_code_to_token($req);
+    my $info = $oauth->get_user_info();
+    $session->data->{name}      = $info->{name};
+    $session->data->{is_author} = 0;
+    $session->data->{is_oauth}  = 1;
+    return {
+        result   => "OK",
+        back_url => $back_url,
+        %$info
+    };
+  }
+
+=head1 DESCRIPTION
+
+This module implements Oauth2 user authorization and gets some info
+about authorized user. It loads specific Oauth2 implementor class for
+given service. There're following supported services:
+
+=over
+
+=item B<Facebook>
+
+=item B<GitHub>
+
+=item B<Google>
+
+=item B<LinkedIn>
+
+=item B<Msn>
+
+=item B<Paypal>
+
+=item B<VKontakte>
+
+=item B<Yandex>
+
+=back
+
+=head1 USAGE
+
+First, you has to register your application by required services and 
+get your C<client id>-s and C<client secret>-s from them. Probably
+you have to register some patterns for return URLs also. 
+C<Client id>-s and C<client secret>-s are configured with
+B<cfg_oauth_client_id($service)> and B<cfg_oauth_client_secret($service)>.
+
+Second, your application has to make return url which will be used by
+B<Oauth2 service> to pass authorization code to your application.
+
+Third, your server exchanges this authorization code for an access token.
+
+Fourth, using this access token your application access desired 
+information or action.
+
+B<PEF::Front::Oauth> stores some information in user session data.
+
+=head2 new ($auth_service, $session)
+
+This function loads implementor class for given C<$auth_service> and
+pass C<PEF::Front::Session> object to it.
+
+=head2 authorization_server($scope, [$redirect_uri])
+
+Returns full URL with required parameters for authorization server for
+given B<scope>. B<Google>, B<LinkedIn>, B<Msn>, B<Paypal> and B<VKontakte>
+services can work only when you pass them previously registered 
+B<redirect uri>.
+
+This method stores in session following keys: 
+C<oauth_state>, C<oauth_redirect_uri>.
+
+=head2 exchange_code_to_token($req)
+
+When Oauth2 service calls your site back, your application has to 
+exchange code to access token. This method stores in session C<oauth_error>
+key when token exchange was not successful.
+
+=head2 get_user_info()
+
+This method returns some basic user information that is obtained from 
+the service. It returns hash like this: 
+  {
+   name  => $username,
+   email => $email,
+   login => $login,
+   avatar => [],
+  }
+
+C<avatar> is array of user pictures when service returns it.
+
+This method stores in session following keys: 
+C<oauth_info_raw> and C<oauth_info>.
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
+

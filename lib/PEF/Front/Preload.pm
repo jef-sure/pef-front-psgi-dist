@@ -82,3 +82,80 @@ sub preload_out_filters {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+ 
+PEF::Front::Preload - Pre-load application parts
+
+=head1 SYNOPSIS
+
+  use PEF::Front::Preload;
+
+=head1 DESCRIPTION
+
+This module pre-loads application modules and makes database connect.
+
+=head1 USAGE
+
+You can turn off preloads of some unneeded parts.
+
+  use PEF::Front::Preload qw(no_db_connect);
+  
+Following parts can be turned off:
+
+=over
+
+=item model
+
+Don't load model description files.
+
+  use PEF::Front::Preload qw(no_model);
+
+=item db_connect
+
+Don't connect to database.
+
+  use PEF::Front::Preload qw(no_db_connect);
+
+=item local_modules
+
+Don't load local model handlers.
+
+  use PEF::Front::Preload qw(no_local_modules);
+
+=item in_filters
+
+Don't load input filters.
+
+  use PEF::Front::Preload qw(no_in_filters);
+
+=item out_filters
+
+Don't load output filters.
+
+  use PEF::Front::Preload qw(no_out_filters);
+
+=back
+
+You can combine these switches as you wish:
+
+  use PEF::Front::Preload qw(no_model no_db_connect);
+
+Usually you use this module right after loading your configuration module
+C<*::AppFrontConfig>.
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
+
