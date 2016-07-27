@@ -81,3 +81,45 @@ sub make_request_cache_key {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+B<PEF::Front::Cache> - Data cache
+
+=head1 DESCRIPTION
+
+This class is used to store cached method responses and 
+any other information.
+
+=head1 FUNCTIONS
+
+=head2 make_request_cache_key($vreq, $cache_attr)
+
+Makes key string for caching model method response.
+
+=head2 get_cache($key_string)
+
+Returns value from cache for given C<$key_string>.
+
+=head2 set_cache($key_string, $value)
+
+Sets value in cache for given C<$key_string>.
+
+=head2 remove_cache_key($key_string)
+
+Deletes cache value for given C<$key_string> if exists.
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

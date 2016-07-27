@@ -233,3 +233,61 @@ sub guess_lang {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+ 
+PEF::Front::NLS - Localization support
+
+=head1 SYNOPSIS
+
+  my $comments_number_text = msg_get_n(
+    $context->{lang}, 
+    '$1 comments', 
+    $comment_count, 
+    $comment_count
+  )->{message};
+
+=head1 DESCRIPTION
+
+Sometimes application has to return localized messages.
+
+=head1 FUNCTIONS
+
+=head2 msg_get($lang, $msgid, @params)
+
+Returns localized text for message C<$msgid> and language C<$lang>. 
+It supports parameterized messages like:
+
+  my $message = msg_get($context->{lang}, 'Hello $1', $user->{name});.
+
+=head2 msg_get_n($lang, $msgid, $num, @params)
+
+This works like Cmsg_get> but supports singular/plural forms. 
+C<$num> is used to select right form.
+
+=head2 msg_peek($lang, $msgid)
+
+Checks whether there's localized text for given C<$lang, $msgid> in database.
+
+=head2 guess_lang($request)
+
+Returns short (ISO 639-1) language code. 
+This function automatically detect language based on URL, HTTP headers,
+cookies and Geo IP. You can turn it off 
+setting C<cfg_no_multilang_support> to true. When it can't detect
+language or language detection is off then it returns C<cfg_default_lang>.
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

@@ -106,3 +106,68 @@ sub get_header {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+ 
+PEF::Front::Headers - Base headers class
+
+PEF::Front::HTTPHeaders - Class encapsulating HTTP Message headers
+ 
+=head1 SYNOPSIS
+
+  my $basic = $context->{headers}->get_header('basic');
+
+=head1 DESCRIPTION
+
+Usually you can get instance of these classes from C<context>: 
+C<$headers> has type C<PEF::Front::HTTPHeaders>. These are also
+used in L<PEF::Front::Response> for cookies and headers.
+
+The only difference between C<PEF::Front::Headers> and
+C<PEF::Front::HTTPHeaders> is that HTTPHeaders can convert
+"CONTENT-TYPE" or "content_type" type of header names to canonical
+"Content-Type".
+
+=head1 FUNCTIONS
+
+=head2 new
+
+Constructor. Can set headers and copy from existing L<PEF::Front::Headers>
+or derived instances.
+
+  my $h = PEF::Front::Headers->new($header => $value);
+  my $h2 = PEF::Front::Headers->new($header1 => $value1, $header2 => $value2, ...);
+  my $h3 = PEF::Front::Headers->new($h, $h2);
+
+=head2 add_header($key, $value)
+
+Adds header. This method allows to have multiple headers with the same name.
+
+=head2 set_header($key, $value)
+  
+Sets header. This method ensures that there's only one header with given name 
+in response.
+
+=head2 remove_header($key)
+
+Removes header.
+
+=head2 get_header($key)
+
+Returns header. In case of multiple headers with the same name it returns 
+array of them.
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
