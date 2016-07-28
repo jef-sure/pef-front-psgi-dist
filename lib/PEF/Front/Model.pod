@@ -521,7 +521,14 @@ Application can use its own codes.
 
 =item B<answer>
 
-Message from application.
+Message from application. If calling type is C</ajax> and 
+C<answer_no_nls> is not present or false then this message
+will be automatically localized.
+
+When calling type is C</get> or C</submit> then value of this 
+key can be open file handle or code reference. If value of this
+key is code reference then it is "streaming function". 
+See L<PSGI/"Delayed Response and Streaming Body">.
 
 =item B<answer_args>
 
@@ -533,11 +540,23 @@ Array of key-value pairs that will be set as output HTTP headers and their
 values. Key-value pairs can be list ($header => $value), 
 array [$header => $value] or hash {$header => $value}.
 
+  [
+    {'X-Hr' => 'x-hr'},
+    ['X-Ar' => 'x-ar'],
+    'X-Header' => 'x-value'
+  ]
+
 =item B<answer_cookies>
 
 Array of key-value pairs that will be set as output HTTP cookies and their 
 values. Key-value pairs can be list ($cookie => $value), 
 array [$cookie => $value] or hash {$cookie => $value}.
+
+  [
+    {ch => 'Chv'},
+    [ca => 'Cav'],
+    Cookie => 'cookie_value'
+  ]
 
 =item B<answer_no_nls>
 
