@@ -87,3 +87,65 @@ sub DESTROY {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+ 
+PEF::Front::Session - Session data object
+
+=head1 SYNOPSIS
+
+  my $session = PEF::Front::Session->new($context->{request});
+  if ($session->data->{name}) {
+    $name      = $session->data->{name};
+    $is_author = $session->data->{is_author};
+  }
+
+=head1 DESCRIPTION
+
+This module allows you to easily create sessions , store data in them and 
+later retrieve that information. It uses L<Storable> for data serialisation.
+
+=head1 FUNCTIONS
+
+=head2 new([$key])
+
+Makes new session object. $key is unique string or request object. 
+If it is empty or omitted then it will be generated.
+If $key is a request object then it will be looked in request parameters 
+and then in cookies for C<cfg_session_request_field> to get the key.
+
+=head2 load()
+
+Loads session data associated with the key.
+
+=head2 store()
+
+Stores session data associated with the key. You don't need to call it
+usually, only when you want to synchronize data with storage.
+
+=head2 destroy()
+
+Destroys session data associated with the key.
+
+=head2 key()
+
+Returns session key.
+
+=head2 data([$hash])
+
+Returns and optionaly sets session data hash. 
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
