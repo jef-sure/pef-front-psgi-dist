@@ -1,0 +1,103 @@
+=encoding utf8
+ 
+=head1 NAME
+ 
+PEF::Front::Guide::QuickStart - a quick-start guide to the 
+PEF::Front web framework.
+
+=head1 DESCRIPTION
+
+A quick-start guide with examples to get you up and running with the 
+PEF::Front web framework.
+
+=head1 PREPARATION
+
+There're many possible ways to start your L<PSGI> application. 
+You can choose any that you like. Here is one of the most effective
+possible way.
+
+  nginx -> uwsgi -> PEF::Front(application)
+
+L<Nginx|https://www.nginx.com/> accepts incoming requests and serves
+static content. Some defined request it passes to L<uwsgi|https://uwsgi-docs.readthedocs.io/en/latest/PSGIquickstart.html>.
+Which works as a very effective PSGI-server and passes semi-prepared requests
+to L<PEF::Front> framework. Which runs your application on.
+
+Approximate B<Nginx> configuration:
+
+  server {
+    listen 80 default_server;
+
+    root /$PROJECT_DIR/www-static;
+    access_log /$PROJECT_DIR/log/nginx.access.log;
+    error_log /$PROJECT_DIR/log/nginx.error.log;
+    client_max_body_size 100m;
+    server_name $PROJECT.DOMAIN;
+    # Static content
+    location =/favicon.ico {}
+    location /jss/ {}
+    location /fonts/ {}
+    location /images/ {}
+    location /styles/ {}
+    location /captchas/ {}
+    # Dynamic content
+    location / {
+      include uwsgi_params;
+      uwsgi_pass unix:///run/uwsgi/app/$UWSGI_APP/socket;
+      uwsgi_modifier1 5;
+    }
+    location ~ /\. {
+      deny all;
+    }
+  }
+
+Approximate B<uwsgi> configuration:
+
+  /etc/uwsgi/apps-available/$UWSGI_APP.ini
+  /etc/uwsgi/apps-enabled/$UWSGI_APP.ini is symbolic link 
+   to /etc/uwsgi/apps-available/$UWSGI_APP.ini
+   
+  [uwsgi]
+  plugins = psgi,logfile
+  chdir = /$PROJECT_DIR
+  logger = file:log/application.log
+  psgi = bin/startup.pl
+  master = true
+  processes = 10
+  stats = 127.0.0.1:5000
+  perl-no-plack = true
+  #cheaper-algo = spare
+  #cheaper = 3
+  #cheaper-initial = 6
+  #cheaper-step = 1
+  harakiri = 0
+  uid = $PROJECT_USER
+  gid = www-data
+  chmod-socket = 664
+
+Create typical project structure:
+
+  cd $PROJECT_DIR
+  mkdir  app bin log model templates var www-static
+  mkdir app/$MyAPP
+  cd app/$MyAPP
+  mkdir InFilter Local OutFilter
+  cd var
+  mkdir cache captcha-db tt_cache upload
+  cd ../ www-static
+  mkdir captchas images jss styles
+  
+Now you are ready to start coding your application.
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
