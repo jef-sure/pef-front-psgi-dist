@@ -254,7 +254,15 @@ There're guides and demos.
 
 =over
 
+=item L<Quick-Start guide|PEF::Front::Guide::QuickStart>
+
 =item L<Configuration parameters|PEF::Front::Config>
+
+=item L<Model methods description|PEF::Front::Model>
+
+=item L<Routing of incoming requests|PEF::Front::Route>
+
+=item L<Template processing|PEF::Front::RenderTT>
 
 =back
 

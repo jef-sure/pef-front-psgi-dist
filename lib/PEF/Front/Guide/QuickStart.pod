@@ -23,7 +23,7 @@ static content. Some defined request it passes to L<uwsgi|https://uwsgi-docs.rea
 Which works as a very effective PSGI-server and passes semi-prepared requests
 to L<PEF::Front> framework. Which runs your application on.
 
-Approximate B<Nginx> configuration:
+=head2 Approximate B<Nginx> configuration
 
   server {
     listen 80 default_server;
@@ -51,7 +51,7 @@ Approximate B<Nginx> configuration:
     }
   }
 
-Approximate B<uwsgi> configuration:
+=head2 Approximate B<uwsgi> configuration
 
   /etc/uwsgi/apps-available/$UWSGI_APP.ini
   /etc/uwsgi/apps-enabled/$UWSGI_APP.ini is symbolic link 
@@ -75,7 +75,7 @@ Approximate B<uwsgi> configuration:
   gid = www-data
   chmod-socket = 664
 
-Create typical project structure:
+=head2 Typical project structure
 
   cd $PROJECT_DIR
   mkdir  app bin log model templates var www-static
@@ -88,6 +88,24 @@ Create typical project structure:
   mkdir captchas images jss styles
   
 Now you are ready to start coding your application.
+
+=head1 CONFIGURING
+
+Edit C</$PROJECT_DIR/app/$MyAPP/AppFrontConfig.pm>. Usually you need only 
+something like this:
+
+  package $MyAPP::AppFrontConfig;
+  sub cfg_db_user      { $DBUSER }
+  sub cfg_db_password  { $DBPASSWORD }
+  sub cfg_db_name      { $DBNAME }
+  1;
+
+When you don't need multilanguage support, then add
+
+  sub cfg_no_nls { 1 }
+  sub cfg_no_multilang_support { 1 }
+
+More info abou configuration is L<here|PEF::Front::Config>.
 
 =head1 AUTHOR
  
