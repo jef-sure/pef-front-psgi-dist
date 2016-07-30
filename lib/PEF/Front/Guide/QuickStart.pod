@@ -107,7 +107,7 @@ When you don't need multilanguage support, then add
   sub cfg_no_nls { 1 }
   sub cfg_no_multilang_support { 1 }
 
-More info abou configuration is L<here|PEF::Front::Config>.
+More info about configuration is L<here|PEF::Front::Config>.
 
 =head2 startup.pl
 
@@ -136,7 +136,7 @@ more info about routing.
 =head1 APPLICATION
 
 "Local" model handlers are located in C</$PROJECT_DIR/app/$MyAPP/Local>.
-For example, </$PROJECT_DIR/app/$MyAPP/Local/Article.pm>:
+For example, C</$PROJECT_DIR/app/$MyAPP/Local/Article.pm>:
 
 
   package MyApp::Local::Article;
