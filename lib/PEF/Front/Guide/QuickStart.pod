@@ -91,6 +91,8 @@ Now you are ready to start coding your application.
 
 =head1 CONFIGURING
 
+=head2 AppFrontConfig
+
 Edit C</$PROJECT_DIR/app/$MyAPP/AppFrontConfig.pm>. Usually you need only 
 something like this:
 
@@ -106,6 +108,84 @@ When you don't need multilanguage support, then add
   sub cfg_no_multilang_support { 1 }
 
 More info abou configuration is L<here|PEF::Front::Config>.
+
+=head2 startup.pl
+
+Typical startup file
+
+  #!/usr/bin/perl
+
+  use lib qw'/$PROJECT_DIR/app';
+
+  use $MyAPP::AppFrontConfig;
+  use PEF::Front::Preload;
+
+  use PEF::Front::Route (
+    '/'               => ['/index' 'R'],
+    qr'/index(.*)'    => '/appIndex$1',
+  );
+
+  PEF::Front::Route->to_app();
+
+L<PEF::Front::Preload> makes database connect and builds validation
+subroutines for model method descriptions. It's very often needed to
+make route for '/' path but after that it's up to whether to use 
+default routing scheme or amend it. See L<PEF::Front::Route> for
+more info about routing.
+
+=head1 APPLICATION
+
+"Local" model handlers are located in C</$PROJECT_DIR/app/$MyAPP/Local>.
+For example, </$PROJECT_DIR/app/$MyAPP/Local/Article.pm>:
+
+
+  package MyApp::Local::Article;
+  use DBIx::Struct qw(connector hash_ref_slice);
+  use strict;
+  use warnings;
+
+  sub get_articles {
+    my ($req, $context) = @_;
+    my $articles = all_rows(
+        [   "article a" => -join => "author w",
+            -columns => ['a.*', 'w.name author']
+        ],
+        -order_by => {-desc => 'id_article'},
+        -limit    => $req->{limit},
+        -offset   => $req->{offset},
+        sub { $_->filter_timestamp->data }
+    );
+    for my $article (@$articles) {
+        $article->{comment_count} =
+          one_row([comment => -columns => 'count(*)'], {hash_ref_slice $article, 'id_article'})->count;
+    }
+    return {
+        result   => "OK",
+        articles => $articles,
+        count    => one_row([article => -columns => 'count(*)'])->count
+    };
+  }
+
+Model description for this handler C</$PROJECT_DIR/model/GetArticles.yaml>:
+
+  ---
+  params:
+    limit:
+      regex: ^\d+$        
+      max-size: 3
+    offset:
+      regex: ^\d+$
+      max-size: 10
+  model: Article::get_articles
+
+Then this handler can be called from AJAX with request like:
+
+  GET /ajaxGetArticles?limit=5&offset=0
+
+or from template:
+
+  [% articles="get articles".model(limit => 5, offset => 0) %]
+
 
 =head1 AUTHOR
  
