@@ -327,3 +327,188 @@ sub to_app {
 
 1;
 
+__END__
+
+=head1 NAME
+
+B<PEF::Front::Route> - Routing of incoming requests
+
+=head1 DESCRIPTION
+
+B<PEF::Front> has already pre-defined routing schema. This document describes
+this schema and methods to amend it.
+
+=head1 ROUTING
+
+Incoming requests must be associated with their handlers. 
+Standard schema is following:
+
+=over
+
+=item B</app$Template>
+
+Returns processed template. Its file name is a lower-case converted 
+from CamelCase form. Like: C</appIndex> -> C<index.html>, 
+C</appUserSettings> -> C<user_settings.html>. It's possible
+to have some extra parameters like C</appArticle/id-283>
+and then parameter C<id> will be equal to "283". 
+Without parameter name this value will be put into parameter C<cookie>.
+
+See C<cfg_parse_extra_params> in L<PEF::Front::Config>.
+
+=item B</ajax$Method>
+
+Returns JSON answer, doesn't support redirects. By default doesn't parse
+parameters from URI path. Method name is lower-case converted 
+from CamelCase form: C</ajaxGetUserInfo> -> "get user info".
+
+=item B</submit$Method>
+
+It's like C</ajax$Method> but support redirects and content can be in 
+any form.
+
+=item B</get$Method>
+
+It's like C</submit$Method> but by default parses parameters from URI path. 
+
+=back
+
+Using routing rules this schema can be changed completely. You can import
+your routing rules in  C<PEF::Front::Route> or add them  with
+C<PEF::Front::Route::add_route(@rules)>. 
+
+  use PEF::Front::Route ('/' => '/appIndex');
+  
+or
+
+  use PEF::Front::Route;
+  PEF::Front::Route::add_route('/' => '/appIndex');
+  
+Routing is always given by pairs: C<rule> => C<destination>. 
+Destination can be simple value or 2 or 3-elements array with value, flags 
+and L<PEF::Front::Response> object.
+
+C<flags> can be string like "L=404" or hash like {L => 404}. 
+In string form flags are separated by space or comma.
+
+  PEF::Front::Route::add_route(
+    '/'        => '/appIndex',
+    '/me'      => ['/appUser', 'L'],
+    '/oldpath' => ['/', 'R=301'],
+  );
+
+Following flags are recognized:
+
+=over
+
+=item B<R>
+
+By default it's temporary redirect but status parameter can change it, 
+for example C<R=301> means permanent redirect. This flag automatically
+means 'Last destination'.
+
+=item B<L>
+
+Last destination. Parameter can set response status: C<L=404>.
+
+=item B<RE>
+
+Regexp flags for matching or substitution operator. Like C<RE=g>.
+
+=back
+
+Following combinations of rules and destinations are supported:
+
+=over
+
+=item B<string> => B<string>
+
+Replaces one path with another.
+
+=item B<Regexp> => B<string>
+
+Transformation function is simple regexp substitution: 
+C<s"$regexp"$string"$flags>.
+
+  qr"/index(.*)" => '/appIndex$1'
+
+=item B<Regexp> => B<CODE>.
+
+If C<m"$regexp"$flags> is true then supplied function is called with params
+C<($request, @params)>, where C<@params> is array of matched groups of
+C<$regexp>.
+
+=item B<string> => B<CODE>
+
+When path is exactly equal to the strng then supplied subroutine is called 
+with parameter C<($request)>.
+
+=item B<CODE> => B<string>
+
+When supplied subroutine with parameter C<($request)> returns true
+then path is replaces with the string.
+
+=item B<CODE => B<CODE>
+
+When supplied subroutine with parameter C<($request)> returns true
+then second subroutine called with params C<($request, @params)>
+where C<@params> is result of first matching function.
+
+=item B<CODE> => B<undef>
+
+Supplied function with parameter C<($request)> checks path and returns new 
+destination.
+
+=back
+
+Routing process is executed in order of rules addition. 
+Final destination of the routing process can have one of supported prefixes
+or point to some static content. If static content is not supported or no such 
+content found then response with 404 status is returned.
+
+Using B<CODE> => B<undef> you can implement any URL mapping that you wish.
+
+  # quasi-RESTful
+
+  sub my_routing {
+    my $path = $_[0]->path;
+    my ($resource, $id) = $path =~ m{^/([^/]+)/?([^/]+)?};
+    $resource = ucfirst $resource;
+    my $action = ucfirst lc $_[0]->method;
+    $_[0]->param(id => $id) if defined $id;
+    return ["/ajax$action$resource", "L"];
+  }
+  
+  PEF::Front::Route::add_route(\&my_routing => undef);
+
+During routing process you can change request parameters and put some notes to
+it. See C<note($key [, $value])> in L<PEF::Front::Request>.
+
+This module exports these functions: C<get post patch put delete trace websocket sse>
+to help with HTTP method filtering.
+
+  PEF::Front::Route::add_route(
+    get  '/' => '/appIndex',
+    post '/' => '/ajaxLogin',
+  );
+
+=head1 APPLICATION ENTRY POINT
+
+You startup file must return reference to subroutine that accept incoming 
+request. C<PEF::Front::Route->to_app()> is this reference. Your last
+line in startup file usually should be
+
+  PEF::Front::Route->to_app(); 
+
+=head1 AUTHOR
+ 
+This module was written and is maintained by Anton Petrusevich.
+
+=head1 Copyright and License
+ 
+Copyright (c) 2016 Anton Petrusevich. Some Rights Reserved.
+ 
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
