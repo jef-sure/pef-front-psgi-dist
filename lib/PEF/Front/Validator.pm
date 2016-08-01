@@ -734,7 +734,6 @@ sub load_validation_rules {
 			validator_sub => $validator_sub
 			}
 			if $@;
-
 		for (keys %$new_rules) {
 			$model_cache{$method}{$_} = $new_rules->{$_} if $_ ne 'code';
 		}
@@ -748,6 +747,14 @@ sub load_validation_rules {
 				} else {
 					$model = cfg_app_namespace . "Local::$new_rules->{model}";
 				}
+				my $class = substr($model, 0, rindex($model, "::"));
+				eval "use $class;";
+				croak {
+					result      => 'INTERR',
+					answer      => 'Validator $1 loading model error: $2',
+					answer_args => [$method, "$@"],
+					}
+					if $@;
 			} else {
 				$model = $new_rules->{model};
 			}

@@ -25,6 +25,7 @@ sub ajax {
 	my $src           = $context->{src};
 	$request{method} = $context->{method};
 	$http_response->set_cookie(lang => {value => $lang, path => "/"});
+
 	if (\&PEF::Front::Config::cfg_context_post_hook != \&PEF::Front::Config::std_context_post_hook) {
 		cfg_context_post_hook($context);
 	}
@@ -58,11 +59,15 @@ sub ajax {
 			my $model = get_model($vreq);
 			cfg_log_level_debug
 				&& $logger->({level => "debug", message => "model: $model"});
-			if (index($model, "::") >= 0) {
-				my $class = substr($model, 0, rindex($model, "::"));
-				eval "use $class;\n\$response = $model(\$vreq, \$context)";
+			if ($model =~ /^\w+::/) {
+				eval {
+					no strict 'refs';
+					$response = &{$model}($vreq, $context);
+				};
 			} else {
-				$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
+				eval {
+					$response = cfg_model_rpc($model)->($vreq, $context);
+				};
 			}
 			if ($@) {
 				cfg_log_level_error

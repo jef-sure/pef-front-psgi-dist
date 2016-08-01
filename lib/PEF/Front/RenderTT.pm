@@ -26,18 +26,19 @@ sub handler {
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
 	my $found         = 0;
+
 	for my $tdir ((cfg_template_dir($request, $lang))) {
 		my $full_template_file = $tdir . "/" . $template_file;
 		if (-f $full_template_file) {
 			$found = 1;
 			cfg_log_level_info
-			  && $logger->({level => "info", message => "found template '$full_template_file'"});
+				&& $logger->({level => "info", message => "found template '$full_template_file'"});
 			last;
 		}
 	}
 	if (!$found) {
 		cfg_log_level_info
-		  && $logger->({level => "info", message => "template '$template' not found"});
+			&& $logger->({level => "info", message => "template '$template' not found"});
 		$http_response->status(404);
 		return $http_response->response();
 	}
@@ -45,7 +46,7 @@ sub handler {
 	$context->{time}      = time;
 	$context->{gmtime}    = [gmtime];
 	$context->{localtime} = [localtime];
-	if(\&PEF::Front::Config::cfg_context_post_hook != \&PEF::Front::Config::std_context_post_hook) {
+	if (\&PEF::Front::Config::cfg_context_post_hook != \&PEF::Front::Config::std_context_post_hook) {
 		cfg_context_post_hook($context);
 	}
 	my $model = subname model => sub {
@@ -59,17 +60,17 @@ sub handler {
 			}
 		}
 		$req{method} = $method if defined $method;
-		my $vreq = eval { validate(\%req, $context) };
+		my $vreq = eval {validate(\%req, $context)};
 		my $response;
 		if (!$@) {
 			my $as = get_method_attrs($vreq => 'allowed_source');
 			if ($as
-				&& (   (!ref ($as) && $as ne 'template')
-					|| (ref ($as) eq 'ARRAY' && !grep { $_ eq 'template' } @$as))
-			  )
+				&& (   (!ref($as) && $as ne 'template')
+					|| (ref($as) eq 'ARRAY' && !grep {$_ eq 'template'} @$as))
+				)
 			{
 				cfg_log_level_error
-				  && $logger->({level => "error", message => "not allowed source"});
+					&& $logger->({level => "error", message => "not allowed source"});
 				return {
 					result      => 'INTERR',
 					answer      => 'Unallowed calling source',
@@ -87,16 +88,20 @@ sub handler {
 			if (not $response) {
 				my $model = get_model($vreq);
 				cfg_log_level_debug
-				  && $logger->({level => "debug", message => "model: $model"});
-				if (index ($model, "::") >= 0) {
-					my $class = substr ($model, 0, rindex ($model, "::"));
-					eval "use $class;\n\$response = $model(\$vreq, \$context)";
+					&& $logger->({level => "debug", message => "model: $model"});
+				if ($model =~ /^\w+::/) {
+					eval {
+						no strict 'refs';
+						$response = &{$model}($vreq, $context);
+					};
 				} else {
-					$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
+					eval {
+						$response = cfg_model_rpc($model)->($vreq, $context);
+					};
 				}
 				if ($@) {
 					cfg_log_level_error
-					  && $logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
+						&& $logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
 					return {result => 'INTERR', answer => 'Internal error', answer_args => []};
 				}
 				if ($response->{result} eq 'OK' && $cache_attr) {
@@ -180,7 +185,7 @@ sub handler {
 		'text',
 		gmtime => subname(
 			gmtime => sub {
-				return [gmtime ($_[0])];
+				return [gmtime($_[0])];
 			}
 		)
 	);
@@ -188,7 +193,7 @@ sub handler {
 		'text',
 		localtime => subname(
 			localtime => sub {
-				return [localtime ($_[0])];
+				return [localtime($_[0])];
 			}
 		)
 	);
@@ -213,7 +218,7 @@ sub handler {
 		'text',
 		response_set_header => subname(
 			response_set_header => sub {
-				my @p = ref ($_[0]) eq 'HASH' ? %{$_[0]} : @_;
+				my @p = ref($_[0]) eq 'HASH' ? %{$_[0]} : @_;
 				$http_response->set_header(@p);
 				return;
 			}
@@ -223,7 +228,7 @@ sub handler {
 		'text',
 		response_set_cookie => subname(
 			response_set_cookie => sub {
-				my @p = ref ($_[0]) eq 'HASH' ? %{$_[0]} : @_;
+				my @p = ref($_[0]) eq 'HASH' ? %{$_[0]} : @_;
 				$http_response->set_cookie(@p);
 				return;
 			}
@@ -256,7 +261,7 @@ sub handler {
 	return sub {
 		my $responder = $_[0];
 		$tt->process($template_file, $context, \$http_response->get_body->[0])
-		  or cfg_log_level_error && $logger->({level => "error", message => "error: " . $tt->error()});
+			or cfg_log_level_error && $logger->({level => "error", message => "error: " . $tt->error()});
 		$responder->($http_response->response());
 	};
 }

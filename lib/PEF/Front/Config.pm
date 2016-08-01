@@ -183,6 +183,7 @@ sub std_template_dir {
 
 sub std_model_rpc {
 	my $model = $_[0];
+	return sub {return {result => "OK"}};
 }
 
 sub std_oauth_client_id {
@@ -274,7 +275,6 @@ sub std_parse_extra_params {
 		}
 	}
 }
-
 
 sub cfg {
 	my $key     = $_[0];
@@ -595,7 +595,9 @@ By default this function returns
 
 =item B<cfg_model_rpc($method)>
 
-This function calls "remote" model methods.
+This function return subroutine reference that calls "remote" methods
+for given C<$model>. That referenced subroutine recieves 
+C<($validated_request, $context)> parameters.
 
 =item B<cfg_oauth_client_id($service)>
 
