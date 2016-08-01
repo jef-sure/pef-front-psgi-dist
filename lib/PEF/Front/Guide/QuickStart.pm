@@ -31,6 +31,12 @@ to L<PEF::Front> framework. Which runs your application on.
 
 =head2 Approximate B<Nginx> configuration
 
+This is usually in C</etc/nginx/sites-enabled/> directory. 
+Alternatively you can put this (say, app-nginx.conf) configuration 
+file in any directory you like and add 
+C<include /$FULL_PATH_TO/app-nginx.conf> to your nginx.conf file 
+in C<http> section.
+
   server {
     listen 80 default_server;
 
