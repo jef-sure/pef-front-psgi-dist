@@ -1,7 +1,4 @@
 package PEF::Front::Route;
-
-use strict;
-use warnings;
 use Scalar::Util qw(blessed);
 use PEF::Front::Config;
 use PEF::Front::Request;
@@ -13,6 +10,8 @@ use if cfg_handle_static(), 'File::LibMagic';
 use Encode;
 use URI::Escape;
 use base 'Exporter';
+use strict;
+use warnings;
 
 our @EXPORT = qw(get post patch put delete trace websocket sse);
 
@@ -197,19 +196,19 @@ sub rewrite_route {
 }
 
 sub prepare_context {
-	my $request = $_[0];
-	my $form    = $request->params;
+	my ($request, $prefix) = @_;
+	my $form = $request->params;
 	my $lang;
 	my ($src, $method, $params);
 	if (cfg_url_contains_lang) {
-		($lang, $src, $method, $params) = $request->path =~ m{^/(\w{2})/(app|ajax|submit|get)([^/]+)/?(.*)$};
+		($lang, $src, $method, $params) = $request->path =~ m{^/(\w{2})/(\Q$prefix\E)([^/]+)/?(.*)$};
 		if (not defined $lang) {
 			my $http_response = PEF::Front::Response->new(request => $request);
 			$http_response->redirect(cfg_location_error, 301);
 			return $http_response;
 		}
 	} else {
-		($src, $method, $params) = $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
+		($src, $method, $params) = $request->path =~ m{^/(\Q$prefix\E)([^/]+)/?(.*)$};
 		if (not defined $method) {
 			my $http_response = PEF::Front::Response->new(request => $request);
 			$http_response->redirect(cfg_location_error, 301);
@@ -299,14 +298,16 @@ sub process_request {
 	}
 	my $lang_offset = (cfg_url_contains_lang) ? 3 : 0;
 	my $handler;
+	my $handler_prefix;
 	for my $prefix (keys %handlers) {
 		if (substr($request->path, $lang_offset, length $prefix) eq $prefix) {
-			$handler = $handlers{$prefix};
+			$handler        = $handlers{$prefix};
+			$handler_prefix = $prefix;
 			last;
 		}
 	}
 	if ($handler) {
-		my $context = prepare_context($request);
+		my $context = prepare_context($request, $handler_prefix);
 		if (blessed($context) && $context->isa('PEF::Front::Response')) {
 			return $context->response();
 		}

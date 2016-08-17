@@ -9,6 +9,23 @@ use JSON;
 use PEF::Front::Config;
 use PEF::Front::Session;
 
+my $lwp_user_agent;
+my $coro_ae_lwp;
+
+BEGIN {
+	if ($INC{'Coro/AnyEvent.pm'}) {
+		eval "use AnyEvent::HTTP::LWP::UserAgent";
+		$coro_ae_lwp = ($@) ? 0 : 1;
+	} else {
+		$coro_ae_lwp = 0;
+	}
+	if ($coro_ae_lwp) {
+		$lwp_user_agent = AnyEvent::HTTP::LWP::UserAgent->new;
+	} else {
+		$lwp_user_agent = LWP::UserAgent->new;
+	}
+}
+
 sub _authorization_server {
 	die 'unimplemented base method';
 }
@@ -25,9 +42,9 @@ sub _parse_user_info {
 	die 'unimplemented base method';
 }
 
-sub _required_redirect_uri { 0 }
-sub _required_state        { 1 }
-sub _returns_state         { 1 }
+sub _required_redirect_uri {0}
+sub _required_state        {1}
+sub _returns_state         {1}
 
 sub _decode_token {
 	decode_json($_[1]);
@@ -74,17 +91,25 @@ sub exchange_code_to_token {
 		my $token_answer;
 		delete $self->{session}->data->{oauth_state};
 		$self->{session}->store;
-		eval {
-			local $SIG{ALRM} = sub { die "timeout" };
-			alarm cfg_oauth_connect_timeout();
+		my $exception;
+		if ($coro_ae_lwp) {
+			$lwp_user_agent->timeout(cfg_oauth_connect_timeout());
 			my $request  = $self->_token_request($request->{code});
-			my $response = LWP::UserAgent->new->request($request);
-			die if !$response or !$response->decoded_content;
-			$token_answer = $self->_decode_token($response->decoded_content);
-		};
-		my $exception = $@;
+			my $response = $lwp_user_agent->request($request);
+			$exception = "timeout" if !$response or !$response->decoded_content;
+		} else {
+			eval {
+				local $SIG{ALRM} = sub {die "timeout"};
+				alarm cfg_oauth_connect_timeout();
+				my $request  = $self->_token_request($request->{code});
+				my $response = $lwp_user_agent->request($request);
+				die if !$response or !$response->decoded_content;
+				$token_answer = $self->_decode_token($response->decoded_content);
+			};
+			$exception = $@;
+			alarm 0;
+		}
 		delete $self->{session}->data->{oauth_redirect_uri}{$self->{service}};
-		alarm 0;
 		if ($exception) {
 			$self->{session}->data->{oauth_error} = $exception;
 			die {
@@ -97,8 +122,8 @@ sub exchange_code_to_token {
 			};
 		}
 		if ($token_answer->{error} || !$token_answer->{access_token}) {
-			$self->{session}->data->{oauth_error} =
-			  $token_answer->{error_description} || $token_answer->{error} || 'no access token';
+			$self->{session}->data->{oauth_error}
+				= $token_answer->{error_description} || $token_answer->{error} || 'no access token';
 			die {
 				result      => 'OAUTHERR',
 				answer      => 'Oauth error: $1',
@@ -123,20 +148,33 @@ sub get_user_info {
 	my ($self) = @_;
 	my $info;
 	$self->{session}->store;
-	eval {
-		local $SIG{ALRM} = sub { die "timeout" };
-		alarm cfg_oauth_connect_timeout();
-		my $response = LWP::UserAgent->new->request($self->_get_user_info_request);
-		die if !$response or !$response->decoded_content;
-		$info = decode_json $response->decoded_content;
-	};
-	alarm 0;
-	if ($@) {
-		$self->{session}->data->{oauth_error} = $@;
+	my $exception;
+	if ($coro_ae_lwp) {
+		$lwp_user_agent->timeout(cfg_oauth_connect_timeout());
+		my $response = $lwp_user_agent->request($self->_get_user_info_request);
+		if ($response && $response->decoded_content) {
+			$info = eval {decode_json $response->decoded_content};
+			$exception = $@;
+		} else {
+			$exception = "timeout";
+		}
+	} else {
+		eval {
+			local $SIG{ALRM} = sub {die "timeout"};
+			alarm cfg_oauth_connect_timeout();
+			my $response = $lwp_user_agent->request($self->_get_user_info_request);
+			die if !$response or !$response->decoded_content;
+			$info = decode_json $response->decoded_content;
+		};
+		$exception = $@;
+		alarm 0;
+	}
+	if ($exception) {
+		$self->{session}->data->{oauth_error} = $exception;
 		die {
 			result => 'OAUTHERR',
 			answer => 'Oauth timeout'
-		} if $@ =~ /timeout/;
+		} if $exception =~ /timeout/;
 		die {
 			result => 'OAUTHERR',
 			answer => 'Oauth connect error'
@@ -155,7 +193,7 @@ sub get_user_info {
 	$self->{session}->data->{oauth_info_raw}{$self->{service}} = $info;
 	$self->{session}->data->{oauth_info} = [] if !$self->{session}->data->{oauth_info};
 	my $oi = $self->{session}->data->{oauth_info};
-	for (my $i = 0 ; $i < @$oi ; ++$i) {
+	for (my $i = 0; $i < @$oi; ++$i) {
 		if ($oi->[$i]->{service} eq $self->{service}) {
 			splice @$oi, $i, 1;
 			last;
@@ -172,9 +210,9 @@ sub load_module {
 	my ($auth_service) = @_;
 	my $module = $auth_service;
 	$module =~ s/[-_]([[:lower:]])/\u$1/g;
-	$module = ucfirst ($module);
+	$module = ucfirst($module);
 	my $module_file = "PEF/Front/Oauth/$module.pm";
-	eval { require $module_file };
+	eval {require $module_file};
 	if ($@) {
 		die {
 			result      => 'INTERR',

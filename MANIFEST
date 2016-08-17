@@ -26,6 +26,7 @@ lib/PEF/Front/Route.pm
 lib/PEF/Front/SecureCaptcha.pm
 lib/PEF/Front/Session.pm
 lib/PEF/Front/Validator.pm
+Changes
 LICENSE
 Makefile.PL
 MANIFEST			This list of files

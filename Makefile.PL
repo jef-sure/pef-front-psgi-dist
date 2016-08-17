@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
 	NAME             => "PEF::Front",
 	AUTHOR           => "Anton Petrusevich",
-	VERSION          => "0.04",
+	VERSION          => "0.05",
 	LICENSE          => "artistic_2",
 	INSTALLDIRS      => 'site',
 	MIN_PERL_VERSION => "5.014000",
@@ -29,6 +29,7 @@ WriteMakefile(
 		'File::Basename'        => 0,
 		'File::Find'            => 0,
 		'FindBin'               => 0,
+		'GDBM_File'             => 0,
 		'GD::SecurityImage'     => 0,
 		'Geo::IPfree'           => 0,
 		'JSON'                  => 0,

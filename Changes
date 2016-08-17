@@ -1,0 +1,9 @@
+0.05 Fr, 05 Aug 2016 10:01:25 GMT
+         - Oauth2 is Coro/AE aware
+         
+0.04 Tue, 02 Aug 2016 17:01:25 GMT
+         - GDBM_File dependency workaround
+         
+0.03 Mon, 01 Aug 2016 08:32:15 GMT
+         - first working CPAN release
+
