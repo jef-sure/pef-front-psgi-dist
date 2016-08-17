@@ -278,6 +278,13 @@ our %handlers = (
 	'/submit' => \&PEF::Front::Ajax::handler,
 );
 
+sub add_prefix_handler {
+	my ($prefix, $handler) = @_;
+	$prefix = '/' . $prefix if substr($prefix, 0, 1) ne '/';
+	die "bad handler type" if ref $handler ne 'CODE';
+	$handlers{$prefix} = $handler;
+}
+
 sub process_request {
 	my ($request, $parent_context) = @_;
 	cfg_log_level_info
@@ -373,6 +380,15 @@ any form.
 It's like C</submit$Method> but by default parses parameters from URI path. 
 
 =back
+
+=head2 CUSTOM PRFIXES
+
+=head3 B<add_prefix_handler($prefix, $handler)>
+
+Application can define its own prefix handlers B</$prefix$Method>. 
+C<$handler> is a code reference that receives C<($request, $context)>.
+
+=head2 RULES
 
 Using routing rules this schema can be changed completely. You can import
 your routing rules in  C<PEF::Front::Route> or add them  with
@@ -500,7 +516,7 @@ request. C<PEF::Front::Route->to_app()> is this reference. Your last
 line in startup file usually should be
 
   PEF::Front::Route->to_app(); 
-
+  
 =head1 AUTHOR
  
 This module was written and is maintained by Anton Petrusevich.

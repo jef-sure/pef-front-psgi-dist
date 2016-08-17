@@ -1,3 +1,6 @@
+0.06 Wed, 17 Aug 2016 16:48:25 GMT
+         - add custom routing prefixes
+         
 0.05 Fr, 05 Aug 2016 10:01:25 GMT
          - Oauth2 is Coro/AE aware
          
