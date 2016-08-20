@@ -204,14 +204,14 @@ sub prepare_context {
 		($lang, $src, $method, $params) = $request->path =~ m{^/(\w{2})/(\Q$prefix\E)([^/]+)/?(.*)$};
 		if (not defined $lang) {
 			my $http_response = PEF::Front::Response->new(request => $request);
-			$http_response->redirect(cfg_location_error, 301);
+			$http_response->redirect(cfg_location_error);
 			return $http_response;
 		}
 	} else {
 		($src, $method, $params) = $request->path =~ m{^/(\Q$prefix\E)([^/]+)/?(.*)$};
 		if (not defined $method) {
 			my $http_response = PEF::Front::Response->new(request => $request);
-			$http_response->redirect(cfg_location_error, 301);
+			$http_response->redirect(cfg_location_error);
 			return $http_response;
 		}
 		$lang = PEF::Front::NLS::guess_lang($request);
@@ -287,6 +287,7 @@ sub add_prefix_handler {
 
 sub process_request {
 	my ($request, $parent_context) = @_;
+	$request = PEF::Front::Request->new($request) if not blessed $request;
 	cfg_log_level_info
 		&& $request->logger->({level => "info", message => "serving request: " . $request->path});
 	my $http_response = rewrite_route($request);
@@ -308,8 +309,8 @@ sub process_request {
 	my $handler_prefix;
 	for my $prefix (keys %handlers) {
 		if (substr($request->path, $lang_offset, length $prefix) eq $prefix) {
-			$handler        = $handlers{$prefix};
-			$handler_prefix = $prefix;
+			$handler = $handlers{$prefix};
+			$handler_prefix = substr($prefix, 1);
 			last;
 		}
 	}
@@ -328,9 +329,7 @@ sub process_request {
 }
 
 sub to_app {
-	sub {
-		process_request(PEF::Front::Request->new($_[0]));
-	};
+	\&process_request;
 }
 
 1;
