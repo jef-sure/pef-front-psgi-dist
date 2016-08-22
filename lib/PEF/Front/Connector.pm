@@ -92,6 +92,7 @@ sub db_connect {
 		*db_connect = \&_db_connector;
 	}
 	for my $aep (@exported_to) {
+		no strict 'refs';
 		*{"$aep\::db_connect"} = \&db_connect;
 	}
 	goto &db_connect;
