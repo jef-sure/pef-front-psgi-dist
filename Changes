@@ -1,3 +1,7 @@
+0.09 Wed, 22 Aug 2016 21:48:25 GMT
+         - fix regexp routes
+         - fix Coro+AE in Request and Oauth
+         
 0.08 Wed, 22 Aug 2016 21:48:25 GMT
          - fix connector
          

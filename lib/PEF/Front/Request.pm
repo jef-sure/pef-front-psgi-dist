@@ -259,7 +259,10 @@ sub _parse_request_body {
 	my $read_body_sub = sub {
 		$self->{raw_body} = '';
 		my $buffer;
-		while ($cl && (!$coro_ae || Coro::AnyEvent::readable $self->_input) && $self->_input->read($buffer, $cl)) {
+		while ($cl
+			&& (!$coro_ae || $Coro::main == $Coro::current || Coro::AnyEvent::readable $self->_input)
+			&& $self->_input->read($buffer, $cl))
+		{
 			$self->{raw_body} .= $buffer;
 			$cl -= length $buffer;
 		}
@@ -310,7 +313,7 @@ sub _parse_multipart_form {
 		$start = index($buffer, $end_boundary) if $start == -1;
 		$buffer .= $chunk
 			if $start == -1
-			&& (!$coro_ae || Coro::AnyEvent::readable $self->_input)
+			&& (!$coro_ae || $Coro::main == $Coro::current || Coro::AnyEvent::readable $self->_input)
 			&& $input->read($chunk, _read_chunk_size);
 		last if $buffer eq '';
 		$start = index($buffer, $start_boundary) if $start == -1;

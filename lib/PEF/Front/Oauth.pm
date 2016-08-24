@@ -9,7 +9,6 @@ use JSON;
 use PEF::Front::Config;
 use PEF::Front::Session;
 
-my $lwp_user_agent;
 my $coro_ae_lwp;
 
 BEGIN {
@@ -18,11 +17,6 @@ BEGIN {
 		$coro_ae_lwp = ($@) ? 0 : 1;
 	} else {
 		$coro_ae_lwp = 0;
-	}
-	if ($coro_ae_lwp) {
-		$lwp_user_agent = AnyEvent::HTTP::LWP::UserAgent->new;
-	} else {
-		$lwp_user_agent = LWP::UserAgent->new;
 	}
 }
 
@@ -92,7 +86,8 @@ sub exchange_code_to_token {
 		delete $self->{session}->data->{oauth_state};
 		$self->{session}->store;
 		my $exception;
-		if ($coro_ae_lwp) {
+		if ($coro_ae_lwp && $Coro::main != $Coro::current) {
+			my $lwp_user_agent = AnyEvent::HTTP::LWP::UserAgent->new;
 			$lwp_user_agent->timeout(cfg_oauth_connect_timeout());
 			my $request  = $self->_token_request($request->{code});
 			my $response = $lwp_user_agent->request($request);
@@ -101,8 +96,9 @@ sub exchange_code_to_token {
 			eval {
 				local $SIG{ALRM} = sub {die "timeout"};
 				alarm cfg_oauth_connect_timeout();
-				my $request  = $self->_token_request($request->{code});
-				my $response = $lwp_user_agent->request($request);
+				my $lwp_user_agent = LWP::UserAgent->new;
+				my $request        = $self->_token_request($request->{code});
+				my $response       = $lwp_user_agent->request($request);
 				die if !$response or !$response->decoded_content;
 				$token_answer = $self->_decode_token($response->decoded_content);
 			};
@@ -149,7 +145,8 @@ sub get_user_info {
 	my $info;
 	$self->{session}->store;
 	my $exception;
-	if ($coro_ae_lwp) {
+	if ($coro_ae_lwp && $Coro::main != $Coro::current) {
+		my $lwp_user_agent = AnyEvent::HTTP::LWP::UserAgent->new;
 		$lwp_user_agent->timeout(cfg_oauth_connect_timeout());
 		my $response = $lwp_user_agent->request($self->_get_user_info_request);
 		if ($response && $response->decoded_content) {
@@ -162,7 +159,8 @@ sub get_user_info {
 		eval {
 			local $SIG{ALRM} = sub {die "timeout"};
 			alarm cfg_oauth_connect_timeout();
-			my $response = $lwp_user_agent->request($self->_get_user_info_request);
+			my $lwp_user_agent = LWP::UserAgent->new;
+			my $response       = $lwp_user_agent->request($self->_get_user_info_request);
 			die if !$response or !$response->decoded_content;
 			$info = decode_json $response->decoded_content;
 		};

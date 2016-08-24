@@ -68,7 +68,7 @@ sub add_route {
 		my ($rule, $rdest) = @params[$i, $i + 1];
 		my $check_method = '';
 		my $required_method;
-		if ($required_method = blessed $rule) {
+		if ($required_method = blessed $rule and $required_method =~ /^PEF::Front::Request::Method::/) {
 			$required_method =~ s/.*:://;
 			$rule         = $$rule;
 			$check_method = "return if \$request->method ne '$required_method';";
@@ -153,6 +153,7 @@ sub add_route {
 sub import {
 	return if @rewrite;
 	my ($class, @params) = @_;
+	$class->export_to_level(1, $class, @EXPORT);
 	add_route(@params);
 }
 
