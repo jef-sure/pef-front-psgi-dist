@@ -52,11 +52,15 @@ sub get_out_cookie    {$_[0]->out_cookies->get_header($_[1])}
 sub method {
 	my $xm = $_[0]{method};
 	return $xm if $xm;
-	if (my $hmo = $_[0]->{env}{X_HTTP_METHOD_OVERRIDE}) {
+	if (my $hmo = $_[0]->{env}{HTTP_X_HTTP_METHOD_OVERRIDE}) {
 		$_[0]{method} = uc $hmo;
-	} elsif ($_[0]->{env}{UPGRADE} eq 'WebSocket' && $_[0]->{env}{CONNECTION} eq 'Upgrade') {
+	} elsif ($_[0]->{env}{HTTP_UPGRADE}
+		&& $_[0]->{env}{HTTP_CONNECTION}
+		&& $_[0]->{env}{HTTP_UPGRADE} eq 'WebSocket'
+		&& $_[0]->{env}{HTTP_CONNECTION} eq 'Upgrade')
+	{
 		$_[0]{method} = 'WEBSOCKET';
-	} elsif ($_[0]->{env}{ACCEPT} eq 'text/event-stream') {
+	} elsif ($_[0]->{env}{HTTP_ACCEPT} eq 'text/event-stream') {
 		$_[0]{method} = 'SSE';
 	} else {
 		$_[0]{method} = $_[0]->{env}{REQUEST_METHOD};
