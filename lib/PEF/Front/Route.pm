@@ -292,7 +292,7 @@ sub process_request {
 	cfg_log_level_info
 		&& $request->logger->({level => "info", message => "serving request: " . $request->path});
 	my $http_response = rewrite_route($request);
-	return $http_response if $http_response;
+	return $http_response->response if $http_response;
 	if (cfg_url_contains_lang
 		&& (length($request->path) < 4 || substr($request->path, 3, 1) ne '/'))
 	{
