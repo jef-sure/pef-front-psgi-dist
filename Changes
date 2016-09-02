@@ -1,3 +1,6 @@
+0.10 Thu, 01 Sep 2016 18:48:25 GMT
+         - fix rewrite routes
+         
 0.09 Wed, 22 Aug 2016 21:48:25 GMT
          - fix regexp routes
          - fix Coro+AE in Request and Oauth
