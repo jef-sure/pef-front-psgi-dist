@@ -1,6 +1,6 @@
 package PEF::Front;
 
-our $VERSION = "0.10";
+our $VERSION = "0.11";
 
 1;
 

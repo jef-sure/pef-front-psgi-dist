@@ -62,6 +62,7 @@ my @std_const_params = qw{
 	cfg_oauth_connect_timeout
 	cfg_unknown_msgid_db
 	cfg_collect_unknown_msgid
+	cfg_model_rules_reload
 };
 
 my @std_var_params = qw{
@@ -143,6 +144,7 @@ sub std_captcha_expire_sec           {300}
 sub std_cache_file                   {cfg_project_dir() . "/var/cache/shared.cache"}
 sub std_cache_size                   {"8m"}
 sub std_cache_method_expire          {60}
+sub std_model_rules_reload           {0}
 sub std_model_dir                    {cfg_project_dir() . "/model"}
 sub std_www_static_dir               {cfg_project_dir() . "/www-static"}
 sub std_www_static_captchas_dir      {cfg_project_dir() . "/www-static/captchas"}
@@ -494,6 +496,12 @@ Default is cfg_project_dir() . "/model".
 
 Directory of "local" model handlers modules. Do not change it.
 Default is "$app_project_dir/Local". 
+
+=item B<cfg_model_rules_reload>
+
+When true, checks wheater file was modified on every input data validation
+and reloads model description if necessary.
+Default is false. 
 
 =item B<cfg_no_multilang_support>
 

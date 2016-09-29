@@ -668,14 +668,23 @@ sub load_validation_rules {
 	$mrf =~ s/ ([[:lower:]])/\u$1/g;
 	$mrf = ucfirst($mrf);
 	my $rules_file = cfg_model_dir . "/$mrf.yaml";
-	my @stats      = stat($rules_file);
-	croak {
-		result => 'INTERR',
-		answer => 'Unknown rules file'
-	} if !@stats;
+	my @stats;
+	if (cfg_model_rules_reload || !exists($model_cache{$method})) {
+		@stats = stat($rules_file);
+		croak {
+			result => 'INTERR',
+			answer => 'Unknown rules file'
+		} if !@stats;
+	} else {
+		$stats[9] = $model_cache{$method}{modified};
+	}
 	my $base_file = cfg_model_dir . "/-base-.yaml";
-	my @bfs       = stat($base_file);
-
+	my @bfs;
+	if (cfg_model_rules_reload || !exists($model_cache{'-base-'})) {
+		@bfs = stat($base_file);
+	} else {
+		$bfs[9] = $model_cache{'-base-'}{modified};
+	}
 	if (@bfs
 		&& (!exists($model_cache{'-base-'}) || $model_cache{'-base-'}{modified} != $bfs[9]))
 	{
@@ -734,6 +743,7 @@ sub load_validation_rules {
 			validator_sub => $validator_sub
 			}
 			if $@;
+
 		for (keys %$new_rules) {
 			$model_cache{$method}{$_} = $new_rules->{$_} if $_ ne 'code';
 		}
