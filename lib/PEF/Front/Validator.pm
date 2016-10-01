@@ -750,9 +750,27 @@ sub load_validation_rules {
 		my $model;
 		my $model_sub;
 		my $cfg_model_sub;
-		if (!exists $new_rules->{model}) {
-			$model = 'rpc_site';
+		if ($new_rules->{model} && !ref($new_rules->{model}) && $new_rules->{model} =~ /^\w+::/) {
+			if ($new_rules->{model} =~ /^PEF::Front/) {
+				$model = $new_rules->{model};
+			} else {
+				$model = cfg_app_namespace . "Local::$new_rules->{model}";
+			}
+			my $class = substr($model, 0, rindex($model, "::"));
+			my $can = substr($model, rindex($model, "::") + 2);
+			eval "use $class";
+			$@ = "$class must contain $can function" if not $@ and not $class->can($can);
+			croak {
+				result      => 'INTERR',
+				answer      => 'Validator $1 loading model error: $2',
+				answer_args => [$method, "$@"],
+				}
+				if $@;
+			$model_sub = "sub { eval { $model(\@_) } }";
+		} else {
+			$model = $new_rules->{model} || 'rpc_site';
 			$cfg_model_sub = eval {cfg_model_rpc($model)};
+			$@ = "cfg_model_rpc('$model') must return dode reference" if ref $cfg_model_sub ne 'CODE';
 			croak {
 				result      => 'INTERR',
 				answer      => 'Validator $1 loading model error: $2',
@@ -760,34 +778,6 @@ sub load_validation_rules {
 				}
 				if $@;
 			$model_sub = "sub { eval { \$cfg_model_sub->(\@_) } }";
-		} else {
-			if (!ref($new_rules->{model}) && $new_rules->{model} =~ /^\w+::/) {
-				if ($new_rules->{model} =~ /^PEF::Front/) {
-					$model = $new_rules->{model};
-				} else {
-					$model = cfg_app_namespace . "Local::$new_rules->{model}";
-				}
-				my $class = substr($model, 0, rindex($model, "::"));
-				eval "use $class";
-				croak {
-					result      => 'INTERR',
-					answer      => 'Validator $1 loading model error: $2',
-					answer_args => [$method, "$@"],
-					}
-					if $@;
-				$model_sub = "sub { eval { $model(\@_) } }";
-			} else {
-				$model         = $new_rules->{model};
-				$cfg_model_sub = cfg_model_rpc($model);
-				$cfg_model_sub = eval {cfg_model_rpc($model)};
-				croak {
-					result      => 'INTERR',
-					answer      => 'Validator $1 loading model error: $2',
-					answer_args => [$method, "$@"],
-					}
-					if $@;
-				$model_sub = "sub { eval { \$cfg_model_sub->(\@_) } }";
-			}
 		}
 		$model_cache{$method}{model}     = $model;
 		$model_cache{$method}{model_sub} = eval $model_sub;
