@@ -751,9 +751,15 @@ sub load_validation_rules {
 		my $model_sub;
 		my $cfg_model_sub;
 		if (!exists $new_rules->{model}) {
-			$model         = 'rpc_site';
-			$cfg_model_sub = cfg_model_rpc($model);
-			$model_sub     = "sub { eval { \$cfg_model_sub->(@_) } }";
+			$model = 'rpc_site';
+			$cfg_model_sub = eval {cfg_model_rpc($model)};
+			croak {
+				result      => 'INTERR',
+				answer      => 'Validator $1 loading model error: $2',
+				answer_args => [$method, "$@"],
+				}
+				if $@;
+			$model_sub = "sub { eval { \$cfg_model_sub->(\@_) } }";
 		} else {
 			if (!ref($new_rules->{model}) && $new_rules->{model} =~ /^\w+::/) {
 				if ($new_rules->{model} =~ /^PEF::Front/) {
@@ -769,11 +775,18 @@ sub load_validation_rules {
 					answer_args => [$method, "$@"],
 					}
 					if $@;
-				$model_sub = "sub { eval { $model(@_) } }";
+				$model_sub = "sub { eval { $model(\@_) } }";
 			} else {
 				$model         = $new_rules->{model};
 				$cfg_model_sub = cfg_model_rpc($model);
-				$model_sub     = "sub { eval { \$cfg_model_sub->(@_) } }";
+				$cfg_model_sub = eval {cfg_model_rpc($model)};
+				croak {
+					result      => 'INTERR',
+					answer      => 'Validator $1 loading model error: $2',
+					answer_args => [$method, "$@"],
+					}
+					if $@;
+				$model_sub = "sub { eval { \$cfg_model_sub->(\@_) } }";
 			}
 		}
 		$model_cache{$method}{model}     = $model;
