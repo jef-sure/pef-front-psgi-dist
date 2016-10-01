@@ -87,21 +87,19 @@ sub handler {
 			}
 			if (not $response) {
 				my $model = get_model($vreq);
+				my $model_sub = get_method_attrs($vreq => 'model_sub');
+				if (ref $model) {
+					local $Data::Dumper::Terse = 1;
+					$model = Dumper($model);
+					substr($model, -1, 1, '') if substr($model, -1, 1) eq "\n";
+				}
 				cfg_log_level_debug
 					&& $logger->({level => "debug", message => "model: $model"});
-				if ($model =~ /^\w+::/) {
-					eval {
-						no strict 'refs';
-						$response = &{$model}($vreq, $context);
-					};
-				} else {
-					eval {
-						$response = cfg_model_rpc($model)->($vreq, $context);
-					};
-				}
+				$response = $model_sub->($vreq, $context);
 				if ($@) {
 					cfg_log_level_error
-						&& $logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
+						&& $logger->({level => "error", message => "model: $model; error: " . Dumper($@, $vreq)});
+					$response = {result => 'INTERR', answer => 'Internal error', answer_args => []};
 					return {result => 'INTERR', answer => 'Internal error', answer_args => []};
 				}
 				if ($response->{result} eq 'OK' && $cache_attr) {
