@@ -81,7 +81,7 @@ our %config_export;
 sub import {
 	my ($modname) = grep {/AppFrontConfig\.pm$/} keys %INC;
 	die "no config" if 0 && !$modname;
-	$modname = 'fakemodule' if !$modname;
+	$modname = 'fakemodule::' if !$modname;
 	(undef, $app_conf_dir, undef) = fileparse($INC{$modname} || '', ".pm");
 	$app_conf_dir = normalize_path($app_conf_dir);
 	$modname =~ s|\.pm||;

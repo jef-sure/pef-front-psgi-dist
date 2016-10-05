@@ -46,7 +46,7 @@ sub make_model_call {
 	return ($model, $model_sub);
 }
 
-sub chain_links {
+sub _chain_links_sub {
 	my $links = $_[0];
 	$links = [$links] if not ref $links or ref $links ne 'ARRAY';
 	my @handlers;
@@ -58,9 +58,9 @@ sub chain_links {
 		}
 	}
 	my $sub_str = <<EOS;
-	sub {
-		my (\$req, \$context) = \@_;
-		my \$response;
+sub {
+	my (\$req, \$context) = \@_;
+	my \$response;
 EOS
 	for (my $i = 0; $i < @handlers; ++$i) {
 		if (ref $handlers[$i]) {
@@ -69,8 +69,18 @@ EOS
 			$sub_str .= "\t\$response = $handlers[$i](\$req, \$context, \$response);\n";
 		}
 	}
-	$sub_str .= "\t\$response;}\n";
-	return eval $sub_str;
+	$sub_str .= "\t\$response;\n}\n";
+	if (wantarray) {
+		my $sub = eval $sub_str;
+		return ($sub, $sub_str);
+	} else {
+		return $sub_str;
+	}
+}
+
+sub chain_links {
+	my ($sub, $sub_str) = _chain_links_sub($_[0]);
+	return $sub;
 }
 
 1;
@@ -812,7 +822,10 @@ prepend its name with 'B<^>', like C<^Some::Lib::Module::handler>.
 
 Model handler that matches /^\^?\w+::/ is "local" otherwise it is "remote".
 
-By default, C<cfg_model_rpc($model_handler)> calls C<PEF::Front::Model::chain_links>.
+By default, C<cfg_model_rpc($model_handler)> calls C<PEF::Front::Model::chain_links>
+which accepts list of handler functions to execute with optional parameters.
+These functions receive C<($req, $context, $previous_response[, $optional_params])>.
+Return value from last function is the return value from model handler.
 
 =head2 Method call types
 

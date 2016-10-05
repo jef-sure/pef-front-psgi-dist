@@ -1,3 +1,6 @@
+0.13 Wed, 05 Oct 2016 22:29:25 GMT
+         - implement PEF::Front::Model::chain_links()
+         
 0.12 Sat, 01 Oct 2016 16:29:25 GMT
          - model method call optimization
          
