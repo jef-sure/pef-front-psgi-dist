@@ -1,5 +1,78 @@
 package PEF::Front::Model;
 
+use PEF::Front::Config;
+
+use strict;
+use warnings;
+
+sub normalize_method_name {
+	my $name = $_[0];
+	if ($name =~ /^\^?PEF::Front/ || $name =~ /^\^/) {
+		$name =~ s/^\^//;
+	} else {
+		$name = cfg_app_namespace . "Local::$name";
+	}
+	$name;
+}
+
+sub make_model_call {
+	my ($method, $model) = @_;
+	my ($model_sub, $cfg_model_sub);
+	if ($model && !ref($model) && $model =~ /^\^?\w+::/) {
+		$model = normalize_method_name($model);
+		my $class = substr($model, 0, rindex($model, "::"));
+		my $can = substr($model, rindex($model, "::") + 2);
+		eval "use $class";
+		$@ = "$class must contain $can function" if not $@ and not $class->can($can);
+		croak {
+			result      => 'INTERR',
+			answer      => 'Validator $1 loading model error: $2',
+			answer_args => [$method, "$@"],
+			}
+			if $@;
+		$model_sub = "sub { eval { $model(\@_) } }";
+	} else {
+		$model ||= 'rpc_site';
+		$cfg_model_sub = eval {cfg_model_rpc($model)};
+		$@ = "cfg_model_rpc('$model') must return code reference" if ref $cfg_model_sub ne 'CODE';
+		croak {
+			result      => 'INTERR',
+			answer      => 'Validator $1 loading model error: $2',
+			answer_args => [$method, "$@"],
+			}
+			if $@;
+		$model_sub = "sub { eval { \$cfg_model_sub->(\@_) } }";
+	}
+	return ($model, $model_sub);
+}
+
+sub chain_links {
+	my $links = $_[0];
+	$links = [$links] if not ref $links or ref $links ne 'ARRAY';
+	my @handlers;
+	for my $link (@$links) {
+		if (not ref $link) {
+			push @handlers, normalize_method_name($link);
+		} elsif (ref $link eq 'HASH') {
+			push @handlers, map {[normalize_method_name($_), $link->{$_}]} keys %$link;
+		}
+	}
+	my $sub_str = <<EOS;
+	sub {
+		my (\$req, \$context) = \@_;
+		my \$response;
+EOS
+	for (my $i = 0; $i < @handlers; ++$i) {
+		if (ref $handlers[$i]) {
+			$sub_str .= "\t\$response = $handlers[$i][0](\$req, \$context, \$response, \$handlers[$i][1]);\n";
+		} else {
+			$sub_str .= "\t\$response = $handlers[$i](\$req, \$context, \$response);\n";
+		}
+	}
+	$sub_str .= "\t\$response;}\n";
+	return eval $sub_str;
+}
+
 1;
 
 __END__
@@ -703,7 +776,10 @@ Model can be "local" or "remote". "Local" means that handler is right
 inside loaded application. "Remote" can mean everything, like 
 "call database method". "Remote" model is handled by 
 C<cfg_model_rpc($model_handler)>. "Local" is located in some module inside
-C<${YourApplicationNamespace}::Local::*>.
+C<${YourApplicationNamespace}::Local::$Module>.
+
+When you need to call some handler outside of "Local::" namespace, 
+prepend its name with 'B<^>', like C<^Some::Lib::Module::handler>.
 
   ---
   params:
@@ -734,7 +810,9 @@ C<${YourApplicationNamespace}::Local::*>.
     };
   }
 
-Model handler that matches /^\w+::/ is "local" otherwise is "remote".
+Model handler that matches /^\^?\w+::/ is "local" otherwise it is "remote".
+
+By default, C<cfg_model_rpc($model_handler)> calls C<PEF::Front::Model::chain_links>.
 
 =head2 Method call types
 

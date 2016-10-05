@@ -184,8 +184,7 @@ sub std_template_dir {
 }
 
 sub std_model_rpc {
-	my $model = $_[0];
-	return sub {return {result => "OK"}};
+	PEF::Front::Model::chain_links($_[0]);
 }
 
 sub std_oauth_client_id {
