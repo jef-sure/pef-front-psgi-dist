@@ -9,6 +9,7 @@ use PEF::Front::NLS;
 use if cfg_handle_static(), 'File::LibMagic';
 use Encode;
 use URI::Escape;
+use File::Basename;
 use base 'Exporter';
 use strict;
 use warnings;
@@ -264,8 +265,20 @@ sub www_static_handler {
 	if ($valid && -e $sfn && -r $sfn && -f $sfn) {
 		use feature 'state';
 		state $file_magic = File::LibMagic->new;
+		my $ctype = $file_magic->checktype_filename($sfn);
+		if ($ctype =~ /^text\/plain/) {
+			state $suffix_map = {
+				'.css' => "text/css",
+				'.js'  => "application/javascript",
+			};
+			my ($name, $path, $suffix) = fileparse($sfn, qr/\.[^.]+$/);
+			$suffix = lc $suffix;
+			if ($suffix_map->{$suffix}) {
+				$ctype =~ s/^text\/plain/$suffix_map->{$suffix}/;
+			}
+		}
 		$http_response->status(200);
-		$http_response->set_header('content-type',   $file_magic->checktype_filename($sfn));
+		$http_response->set_header('content-type',   $ctype);
 		$http_response->set_header('content-length', -s $sfn);
 		open my $bh, "<", $sfn;
 		$http_response->set_body($bh);
