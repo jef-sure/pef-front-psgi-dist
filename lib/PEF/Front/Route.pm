@@ -220,9 +220,18 @@ sub prepare_context {
 	}
 	cfg_parse_extra_params($src, $params, $form);
 	return PEF::Front::Response->new(request => $request, status => 404) if $method =~ /[\/.\\]/;
+	my $rm = $method;
+	$method =~ tr/_/ /;
 	$method =~ s/[[:upper:]]\K([[:upper:]])/ \l$1/g;
 	$method =~ s/[[:lower:]]\K([[:upper:]])/ \l$1/g;
 	$method = lcfirst $method;
+
+	if (cfg_url_only_camel_case) {
+		my $mrf = $method;
+		$mrf =~ s/ ([[:lower:]])/\u$1/g;
+		$mrf = ucfirst($mrf);
+		return PEF::Front::Response->new(request => $request, status => 404) if $mrf ne $rm;
+	}
 	return {
 		ip        => $request->remote_ip,
 		lang      => $lang,
@@ -322,7 +331,9 @@ sub process_request {
 	my $handler;
 	my $handler_prefix;
 	for my $prefix (keys %handlers) {
-		if (substr($request->path, $lang_offset, length $prefix) eq $prefix) {
+		if (substr($request->path, $lang_offset, length $prefix) eq $prefix
+			&& (!cfg_url_only_camel_case || substr($request->path, $lang_offset + length $prefix, 1) =~ /^[A-Z]$/))
+		{
 			$handler = $handlers{$prefix};
 			$handler_prefix = substr($prefix, 1);
 			last;

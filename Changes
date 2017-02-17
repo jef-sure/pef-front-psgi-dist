@@ -1,3 +1,7 @@
+0.15 Fri, 17 Feb 2017 09:00:00 GMT
+         - fix request reading in coro+ae case
+         - new config parameter cfg_url_only_camel_case
+          
 0.14 Wed, 25 Jan 2017 18:00:00 GMT
          - fixed content-type of static files for .js and .css
           

@@ -47,6 +47,7 @@ my @std_const_params = qw{
 	cfg_app_namespace
 	cfg_default_lang
 	cfg_url_contains_lang
+	cfg_url_only_camel_case
 	cfg_template_dir_contains_lang
 	cfg_no_multilang_support
 	cfg_location_error
@@ -128,6 +129,7 @@ sub std_db_reconnect_trys            {30}
 sub std_no_multilang_support         {1}
 sub std_default_lang                 {'en'}
 sub std_url_contains_lang            {0}
+sub std_url_only_camel_case          {1}
 sub std_template_dir_contains_lang   {0}
 sub std_handle_static                {0}
 sub std_app_namespace                {$app_namespace}
@@ -565,6 +567,11 @@ Default is cfg_project_dir() . "/var/upload".
 
 Boolean value whether URI path is prefixed with short language name
 like /en/, /de/, etc. Default is false.
+
+=item B<cfg_url_only_camel_case>
+
+Boolean value whether routed path can be only in Camel Case form. 
+Default is true.
 
 =item B<cfg_www_static_captchas_dir>
 
