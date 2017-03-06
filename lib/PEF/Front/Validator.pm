@@ -32,7 +32,7 @@ sub _collect_base_rules {
 			result      => 'INTERR',
 			answer      => 'Internal server error',
 			answer_args => [],
-			message     => "Validation $method error: unknow base rule '$entry' for '$pr'",
+			message     => "Validation $method error: unknown base rule '$entry' for '$pr'",
 			}
 			unless exists $model_cache{'-base-'}{rules}{params}{$entry};
 		my $rules = $model_cache{'-base-'}{rules}{params}{$entry};
@@ -750,7 +750,7 @@ sub load_validation_rules {
 		}
 		my ($model, $model_sub) = PEF::Front::Model::make_model_call($method, $new_rules->{model});
 		$model_cache{$method}{model}     = $model;
-		$model_cache{$method}{model_sub} = eval $model_sub;
+		$model_cache{$method}{model_sub} = $model_sub;
 		if (exists $new_rules->{result}) {
 			my $rsubname = "result$mrf";
 			$model_cache{$method}{result_sub} = subname $rsubname => _build_result_processor($new_rules->{result} || {});

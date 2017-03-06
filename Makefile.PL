@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
 	NAME             => "PEF::Front",
 	AUTHOR           => "Anton Petrusevich",
-	VERSION          => "0.15",
+	VERSION          => "0.16",
 	LICENSE          => "artistic_2",
 	INSTALLDIRS      => 'site',
 	MIN_PERL_VERSION => "5.014000",

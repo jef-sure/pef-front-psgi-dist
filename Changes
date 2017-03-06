@@ -1,3 +1,6 @@
+0.16 Mon, 06 Mar 2017 11:30:00 GMT
+         - fix chained model call
+          
 0.15 Fri, 17 Feb 2017 09:00:00 GMT
          - fix request reading in coro+ae case
          - new config parameter cfg_url_only_camel_case

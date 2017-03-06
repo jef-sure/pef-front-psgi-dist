@@ -30,7 +30,7 @@ sub make_model_call {
 			answer_args => [$method, "$@"],
 			}
 			if $@;
-		$model_sub = "sub { eval { $model(\@_) } }";
+		$model_sub = eval "sub { eval { $model(\@_) } }";
 	} else {
 		$model ||= 'rpc_site';
 		$cfg_model_sub = eval {cfg_model_rpc($model)};
@@ -41,7 +41,7 @@ sub make_model_call {
 			answer_args => [$method, "$@"],
 			}
 			if $@;
-		$model_sub = "sub { eval { \$cfg_model_sub->(\@_) } }";
+		$model_sub = eval "sub { eval { \$cfg_model_sub->(\@_) } }";
 	}
 	return ($model, $model_sub);
 }
