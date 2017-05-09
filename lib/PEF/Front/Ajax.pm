@@ -152,6 +152,9 @@ sub ajax {
 		}
 	}
 out:
+	if (exists $response->{answer_status} and $response->{answer_status} > 100) {
+		$http_response->status($response->{answer_status});
+	}
 	if ($context->{is_subrequest}) {
 		return $response;
 	} elsif ($json) {
@@ -164,14 +167,11 @@ out:
 		$http_response->set_body(encode_json($response));
 		return $http_response->response();
 	} else {
-		if (exists $response->{answer_status} and $response->{answer_status} > 100) {
-			$http_response->status($response->{answer_status});
-			if (   $response->{answer_status} > 300
-				&& $response->{answer_status} < 400
-				&& (my $loc = $http_response->get_header('Location')))
-			{
-				$new_loc = $loc;
-			}
+		if (   $http_response->status > 300
+			&& $http_response->status < 400
+			&& (my $loc = $http_response->get_header('Location')))
+		{
+			$new_loc = $loc;
 		}
 		if (!defined($new_loc) || $new_loc eq '') {
 			cfg_log_level_debug
