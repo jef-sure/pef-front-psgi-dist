@@ -1,3 +1,6 @@
+0.18 Tue, 09 May 2017 11:30:00 GMT
+         - add answer_http_response and answer_data  
+          
 0.17 Tue, 09 May 2017 11:30:00 GMT
          - add http status set to result and ajax 
           

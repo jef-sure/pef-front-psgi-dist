@@ -154,17 +154,28 @@ sub ajax {
 out:
 	if (exists $response->{answer_status} and $response->{answer_status} > 100) {
 		$http_response->status($response->{answer_status});
+		delete $response->{answer_status};
 	}
 	if ($context->{is_subrequest}) {
 		return $response;
 	} elsif ($json) {
-		if (exists $response->{answer} and not exists $response->{answer_no_nls}) {
-			my $args = exists($response->{answer_args}) ? $response->{answer_args} : [];
-			$args = [$args] if 'ARRAY' ne ref $args;
-			$response->{answer} = msg_get($lang, $response->{answer}, @$args)->{message};
+		if (    exists $response->{answer_http_response}
+			and blessed $response->{answer_http_response}
+			and $response->{answer_http_response}->isa('PEF::Front::Response'))
+		{
+			$http_response = $response->{answer_http_response};
+		} else {
+			if (exists $response->{answer} and not exists $response->{answer_no_nls}) {
+				my $args = exists($response->{answer_args}) ? $response->{answer_args} : [];
+				$args = [$args] if 'ARRAY' ne ref $args;
+				$response->{answer} = msg_get($lang, $response->{answer}, @$args)->{message};
+			}
+			if (exists $response->{answer_data} and ref $response->{answer_data}) {
+				$response = $response->{answer_data};
+			}
+			$http_response->content_type('application/json; charset=utf-8');
+			$http_response->set_body(encode_json($response));
 		}
-		$http_response->content_type('application/json; charset=utf-8');
-		$http_response->set_body(encode_json($response));
 		return $http_response->response();
 	} else {
 		if (   $http_response->status > 300
