@@ -14,6 +14,12 @@ use PEF::Front::Validator;
 use PEF::Front::NLS;
 use PEF::Front::Response;
 
+my $json_utf8_object;
+
+BEGIN {
+	$json_utf8_object = JSON->new->utf8->convert_blessed;
+}
+
 sub ajax {
 	my ($request, $context) = @_;
 	my $form          = $request->params;
@@ -174,7 +180,7 @@ out:
 				$response = $response->{answer_data};
 			}
 			$http_response->content_type('application/json; charset=utf-8');
-			$http_response->set_body(encode_json($response));
+			$http_response->set_body($json_utf8_object->encode($response));
 		}
 		return $http_response->response();
 	} else {
