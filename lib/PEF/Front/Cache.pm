@@ -5,16 +5,17 @@ use PEF::Front::Config;
 use Data::Dumper;
 
 use base 'Exporter';
-our @EXPORT = qw{
-	get_cache
-	make_request_cache_key
-	remove_cache_key
-	set_cache
-};
+our @EXPORT;
 
 my $dumper;
 
 BEGIN {
+	@EXPORT = qw{
+		get_cache
+		make_request_cache_key
+		remove_cache_key
+		set_cache
+	};
 	$dumper = Data::Dumper->new([]);
 	$dumper->Indent(0);
 	$dumper->Pair(":");
