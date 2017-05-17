@@ -23,6 +23,7 @@ BEGIN {
 	$dumper->Deepcopy(1);
 	$dumper->Sortkeys(1);
 	my $module = cfg_cache_module();
+
 	if ($module !~ /::/) {
 		$module = "PEF::Front::Cache::$module";
 	}
@@ -38,11 +39,12 @@ BEGIN {
 				answer_args => [$module]
 			};
 		}
+		my $mp = __PACKAGE__;
 		for my $method (@EXPORT) {
 			my $cref = "$module"->can($method);
 			if ($cref) {
 				no strict 'refs';
-				*{$method} = $cref;
+				*{$mp . "::$method"} = $cref;
 			}
 		}
 	}
