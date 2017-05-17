@@ -60,6 +60,7 @@ my @std_const_params = qw{
 	cfg_session_db_file
 	cfg_session_ttl
 	cfg_session_request_field
+	cfg_session_module
 	cfg_oauth_connect_timeout
 	cfg_unknown_msgid_db
 	cfg_collect_unknown_msgid
@@ -159,6 +160,7 @@ sub std_log_level_debug              {0}
 sub std_session_db_file              {cfg_project_dir() . "/var/cache/session.db"}
 sub std_session_ttl                  {86400 * 30}
 sub std_session_request_field        {'auth'}
+sub std_session_module               {'MLDBM'}
 sub std_cookie_unset_negative_expire {-3600}
 sub std_oauth_connect_timeout        {15}
 
