@@ -1,3 +1,6 @@
+0.24 Tue, Dec 19 2017 17:56:56 GMT 
+         - fix session loading in validator
+          
 0.23 Tue, Dec 19 2017 17:06:56 GMT 
          - fix name clash for route's "delete" and builtin
           
