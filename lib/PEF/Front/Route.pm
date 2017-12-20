@@ -41,11 +41,6 @@ sub del ($) {
 	bless \$rule, "PEF::Front::Request::Method::DELETE";
 }
 
-sub trace($) {
-	my $rule = $_[0];
-	bless \$rule, "PEF::Front::Request::Method::TRACE";
-}
-
 sub websocket ($) {
 	my $rule = $_[0];
 	bless \$rule, "PEF::Front::Request::Method::WEBSOCKET";
